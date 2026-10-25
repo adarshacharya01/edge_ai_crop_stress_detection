@@ -1,0 +1,4 @@
+build/
+Model/model_params.h
+__pycache__/
+*.pyc

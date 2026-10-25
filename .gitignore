@@ -1,0 +1,26 @@
+# Node dependencies
+node_modules/
+**/node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.local
+
+# Logs
+logs/
+*.log

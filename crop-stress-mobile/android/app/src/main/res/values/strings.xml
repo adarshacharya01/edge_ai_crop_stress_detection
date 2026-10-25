@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Crop Stress AI</string>
+    <string name="title_activity_main">Crop Stress AI</string>
+    <string name="package_name">com.cropstress.ai</string>
+    <string name="custom_url_scheme">com.cropstress.ai</string>
+</resources>
