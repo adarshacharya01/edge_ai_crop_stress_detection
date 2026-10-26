@@ -1,10 +1,18 @@
+#if __has_include("APP/app.h")
 #include "APP/app.h"
-
-#include <stdio.h>
 #include "Config/config.h"
 #include "HAL/hal.h"
 #include "Model/model.h"
 #include "Sensors/sensors.h"
+#else
+#include "app.h"
+#include "config.h"
+#include "hal.h"
+#include "model.h"
+#include "sensors.h"
+#endif
+
+#include <stdio.h>
 
 int app_run(void)
 {
@@ -19,11 +27,7 @@ int app_run(void)
 
     printf("Initialization successful. Starting measurement loop...\r\n");
 
-#if defined(CROP_SIMULATOR)
-    for (unsigned sample = 0; sample < 3; ++sample) {
-#else
     for (;;) {
-#endif
         crop_reading_t reading;
         if (sensors_read(&reading)) {
             float p = model_stress_probability(&reading);

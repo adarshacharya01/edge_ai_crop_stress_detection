@@ -1,7 +1,12 @@
+#if __has_include("Model/model.h")
 #include "Model/model.h"
+#include "Model/model_params.h"
+#else
+#include "model.h"
+#include "model_params.h"
+#endif
 
 #include <math.h>
-#include "model_params.h"
 
 float model_stress_probability(const crop_reading_t *reading)
 {

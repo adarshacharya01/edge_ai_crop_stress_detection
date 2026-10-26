@@ -1,10 +1,14 @@
+#if __has_include("HAL/board_adc.h")
 #include "HAL/board_adc.h"
 #include "Config/config.h"
+#else
+#include "board_adc.h"
+#include "config.h"
+#endif
 
 #include <stddef.h>
 #include <stdbool.h>
 
-#if !defined(CROP_SIMULATOR)
 
 #include "fsl_common.h"
 #include "fsl_clock.h"
@@ -29,9 +33,7 @@ bool crop_adc_init(void)
     CLOCK_SetIpSrc(kCLOCK_Lpadc0, kCLOCK_IpSrcFro192M);
     CLOCK_SetIpSrcDiv(kCLOCK_Lpadc0, kSCG_SysClkDivBy10);
 
-    /* 3. Configure Pin Muxing for External Analog Input (PTD1 = Arduino A0 = ADC0_B5) */
-    CLOCK_EnableClock(kCLOCK_PortD);
-    PORT_SetPinMux(PORTD, 1U, kPORT_PinDisabledOrAnalog);
+
 
     /* 4. Configure LPADC Peripheral */
     lpadc_config_t lpadcConfig;
@@ -107,22 +109,3 @@ bool crop_adc_read_light_sensor_mv(float *millivolts)
     return crop_adc_read_channel_mv(CROP_ADC_LIGHT_CHANNEL, (bool)CROP_ADC_LIGHT_SIDE_B, millivolts);
 }
 
-#else
-
-/* Desktop simulator dummy stubs */
-bool crop_adc_init(void) { return true; }
-bool crop_adc_read_mv(float *millivolts) {
-    if (millivolts) *millivolts = 1800.0f;
-    return true;
-}
-bool crop_adc_read_light_sensor_mv(float *millivolts) {
-    if (millivolts) *millivolts = 1500.0f;
-    return true;
-}
-bool crop_adc_read_channel_mv(uint32_t channel, bool is_side_b, float *millivolts) {
-    (void)channel; (void)is_side_b;
-    if (millivolts) *millivolts = 1800.0f;
-    return true;
-}
-
-#endif /* !defined(CROP_SIMULATOR) */

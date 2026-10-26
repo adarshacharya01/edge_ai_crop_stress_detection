@@ -1,0 +1,47 @@
+{
+  "version": 7,
+  "cmakeMinimumRequired": {
+    "major": 3
+  },
+  "configurePresets": [
+    {
+      "name": "debug",
+      "displayName": "debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "toolchainFile": "${sourceDir}/armgcc.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "debug",
+        "CMAKE_MAKE_PROGRAM": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/ninja-1.13.2/ninja.exe"
+      },
+      "inherits": "debug-env"
+    },
+    {
+      "name": "release",
+      "displayName": "release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "toolchainFile": "${sourceDir}/armgcc.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "release",
+        "CMAKE_MAKE_PROGRAM": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/ninja-1.13.2/ninja.exe"
+      },
+      "inherits": "release-env"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "displayName": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "displayName": "release",
+      "configurePreset": "release"
+    }
+  ],
+  "include": [
+    "mcux_include.json"
+  ]
+}

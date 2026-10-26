@@ -1,11 +1,16 @@
+#if __has_include("HAL/hal.h")
 #include "HAL/hal.h"
 #include "HAL/board_adc.h"
 #include "Config/config.h"
+#else
+#include "hal.h"
+#include "board_adc.h"
+#include "config.h"
+#endif
 
 #include <stddef.h>
 #include <stdbool.h>
 
-#if !defined(CROP_SIMULATOR)
 
 #include "board.h"
 #include "clock_config.h"
@@ -43,8 +48,8 @@ static void init_i2c_pins(void)
 
 bool hal_init(void)
 {
-    BOARD_InitBootPins();
-    BOARD_InitBootClocks();
+    BOARD_InitPins();
+    BOARD_BootClockRUN();
     BOARD_InitDebugConsole();
 
     /* Configure I2C Clock: FRO 192 MHz / 16 = 12 MHz */
@@ -106,5 +111,3 @@ bool hal_soil_millivolts(float *millivolts)
 {
     return crop_adc_read_mv(millivolts);
 }
-
-#endif /* !defined(CROP_SIMULATOR) */

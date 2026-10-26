@@ -1,0 +1,39 @@
+{
+  "version": 7,
+  "cmakeMinimumRequired": {
+    "major": 3
+  },
+  "configurePresets": [
+    {
+      "name": "debug-env",
+      "displayName": "debug-env",
+      "hidden": true,
+      "environment": {
+        "ARMGCC_DIR": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/arm-gnu-toolchain-14.2.rel1-mingw-w64-x86_64-arm-none-eabi",
+        "MCUX_VENV_PATH": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/.venv_3_10/Scripts",
+        "PATH": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/ninja-1.13.2;C:/Users/ADARSH ACHARYA/.mcuxpressotools/arm-gnu-toolchain-14.2.rel1-mingw-w64-x86_64-arm-none-eabi/bin;$env{MCUX_VENV_PATH}${pathListSep}$penv{PATH}",
+        "POSTPROCESS_UTILITY": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/mcux-fixelf-14.2.2/mcux-fixelf.exe",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "cacheVariables": {
+        "CMAKE_MAKE_PROGRAM": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/ninja-1.13.2/ninja.exe"
+      }
+    },
+    {
+      "name": "release-env",
+      "displayName": "release-env",
+      "hidden": true,
+      "environment": {
+        "ARMGCC_DIR": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/arm-gnu-toolchain-14.2.rel1-mingw-w64-x86_64-arm-none-eabi",
+        "MCUX_VENV_PATH": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/.venv_3_10/Scripts",
+        "PATH": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/ninja-1.13.2;C:/Users/ADARSH ACHARYA/.mcuxpressotools/arm-gnu-toolchain-14.2.rel1-mingw-w64-x86_64-arm-none-eabi/bin;$env{MCUX_VENV_PATH}${pathListSep}$penv{PATH}",
+        "POSTPROCESS_UTILITY": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/mcux-fixelf-14.2.2/mcux-fixelf.exe",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "cacheVariables": {
+        "CMAKE_MAKE_PROGRAM": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/ninja-1.13.2/ninja.exe"
+      }
+    }
+  ],
+  "buildPresets": []
+}

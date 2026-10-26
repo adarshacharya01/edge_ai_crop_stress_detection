@@ -1,11 +1,18 @@
+#if __has_include("Sensors/sensors.h")
 #include "Sensors/sensors.h"
+#include "Config/config.h"
+#include "HAL/hal.h"
+#include "HAL/board_adc.h"
+#else
+#include "sensors.h"
+#include "config.h"
+#include "hal.h"
+#include "board_adc.h"
+#endif
 
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
-#include "Config/config.h"
-#include "HAL/hal.h"
-#include "HAL/board_adc.h"
 
 static bool s_bh1750_present = false;
 static bool s_fxls8964_present = false;
