@@ -19,6 +19,8 @@ add_compile_options(
 add_compile_definitions(
     CPU_MCXW716CMFTA
     CPU_MCXW716CMFTA_cm33
+    __USE_CMSIS
+    DISABLE_WDOG=1
     SDK_DEBUGCONSOLE=1
     SDK_DEBUGCONSOLE_UART=1
     DEBUG
