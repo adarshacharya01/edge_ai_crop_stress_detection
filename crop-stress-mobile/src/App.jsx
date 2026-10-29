@@ -3,35 +3,23 @@ import {
   Sprout, 
   Activity, 
   Sliders, 
-  Target, 
-  Radio, 
-  CheckCircle2, 
+  Settings, 
   AlertTriangle,
   Lightbulb,
-  Layers,
-  ChevronRight,
-  Info
+  Droplets,
+  ArrowRight
 } from 'lucide-react';
 
 import StressGauge from './components/StressGauge';
 import SensorGrid from './components/SensorGrid';
 import SimulatorPanel from './components/SimulatorPanel';
-import CalibrationWizard from './components/CalibrationWizard';
-import PlantProfiles from './components/PlantProfiles';
+import PlantAndDevice, { CROPS } from './components/PlantAndDevice';
 
 import { calculateStressProbability, diagnoseCropState, CROP_ALERT_THRESHOLD } from './services/cropModel';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedCrop, setSelectedCrop] = useState({
-    id: 'tomato',
-    name: 'Tomato (Solanum lycopersicum)',
-    category: 'Fruiting Crop',
-    moistureTarget: '50% - 75%',
-    tempIdeal: '20°C - 27°C',
-    lightNeeds: 'Full Sun (30k+ lx)',
-    tip: 'Sensitive to erratic watering which causes blossom end rot.'
-  });
+  const [selectedCrop, setSelectedCrop] = useState(CROPS[0]);
 
   // Current reading state (Starts in healthy baseline)
   const [reading, setReading] = useState({
@@ -51,6 +39,24 @@ export default function App() {
   }, [reading, stressScore]);
 
   const isAlert = stressScore >= CROP_ALERT_THRESHOLD;
+  const isWarning = stressScore >= 0.40 && !isAlert;
+
+  // Quick Scenario triggers for main dashboard
+  const setQuickScenario = (soil, temp, rh, lux) => {
+    setReading({
+      soil_pct: soil,
+      temperature_c: temp,
+      humidity_pct: rh,
+      light_lux: lux
+    });
+  };
+
+  const quickWater = () => {
+    setReading((prev) => ({
+      ...prev,
+      soil_pct: Math.min(88, Math.max(25, prev.soil_pct + 30))
+    }));
+  };
 
   return (
     <div className="app-container">
@@ -58,105 +64,121 @@ export default function App() {
       <header className="app-header">
         <div className="brand-area">
           <div className="brand-icon">
-            <Sprout size={20} />
+            <Sprout size={18} />
           </div>
           <div>
-            <div className="brand-title">SproutGuard AI</div>
-            <div className="brand-subtitle">FRDM-MCXW71 Edge Monitor</div>
+            <div className="brand-title">SproutGuard</div>
+            <div className="brand-subtitle">{selectedCrop.name} · FRDM-MCXW71</div>
           </div>
         </div>
 
-        <div 
+        <button 
           className="connection-pill simulated"
           onClick={() => setActiveTab('simulator')}
-          title="Virtual Sensor Mode"
+          title="Virtual Simulation Active"
         >
           <div className="pulse-dot" />
           <span>Simulated</span>
-        </div>
+        </button>
       </header>
 
       {/* Dynamic Screen Content */}
       <main className="app-content">
         {activeTab === 'dashboard' && (
           <>
-            {/* Status Hero Card */}
+            {/* Unified Crop Health Hero Card */}
             <div 
-              className="status-hero" 
+              className="unified-hero-card" 
               style={{ '--hero-accent': diagnosis.color }}
               id="plant-status-banner"
             >
-              <div className="status-hero-top">
-                <span 
-                  className="status-badge"
-                  style={{ color: diagnosis.color, border: `1px solid ${diagnosis.color}40` }}
-                >
-                  {diagnosis.badge}
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  {selectedCrop.name.split(' ')[0]}
-                </span>
-              </div>
-              <div className="status-title" style={{ color: diagnosis.color }}>
-                {diagnosis.title}
-              </div>
-              <div className="status-desc">
-                {diagnosis.summary}
-              </div>
-            </div>
+              <div className="hero-left-content">
+                <div className="hero-tag-row">
+                  <span 
+                    className="status-pill-badge"
+                    style={{ color: diagnosis.color, background: `${diagnosis.color}15`, borderColor: `${diagnosis.color}35` }}
+                  >
+                    {diagnosis.badge}
+                  </span>
+                  <span className="hero-crop-tag" onClick={() => setActiveTab('settings')}>
+                    {selectedCrop.name}
+                  </span>
+                </div>
 
-            {/* Edge AI Semicircular Gauge */}
-            <StressGauge score={stressScore} />
+                <div className="hero-title" style={{ color: diagnosis.color }}>
+                  {diagnosis.title}
+                </div>
 
-            {/* 4 Sensor Telemetry Cards */}
-            <SensorGrid reading={reading} />
-
-            {/* Plant Doctor Action Plan */}
-            <div className="action-box">
-              <div className="action-header">
-                <Lightbulb size={18} color="#f59e0b" />
-                <span>Agronomic Action Plan</span>
-              </div>
-              <ul className="action-list">
-                {diagnosis.actions.map((action, idx) => (
-                  <li key={idx} className="action-item">
-                    <span 
-                      className="action-item-dot" 
-                      style={{ background: diagnosis.color }}
-                    />
-                    <span>{action}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Fast Test Button Banner */}
-            <div 
-              onClick={() => setActiveTab('simulator')}
-              style={{
-                background: 'rgba(56, 189, 248, 0.08)',
-                border: '1px dashed rgba(56, 189, 248, 0.3)',
-                borderRadius: 14,
-                padding: '12px 16px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                cursor: 'pointer'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Sliders size={18} color="#38bdf8" />
-                <div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#fff' }}>
-                    Want to test different stress conditions?
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                    Open Virtual Testbench to simulate heatwaves & dry soil
-                  </div>
+                <div className="hero-advice">
+                  {diagnosis.summary}
                 </div>
               </div>
-              <ChevronRight size={16} color="#38bdf8" />
+
+              {/* Compact Circular Stress Gauge */}
+              <div className="hero-right-gauge">
+                <StressGauge score={stressScore} compact={true} />
+              </div>
             </div>
+
+            {/* Quick Testing Chips */}
+            <div className="quick-test-bar">
+              <span className="quick-bar-label">Quick Test:</span>
+              <div className="quick-chip-group">
+                <button 
+                  className="quick-chip"
+                  onClick={() => setQuickScenario(52, 23.5, 62, 18000)}
+                >
+                  🌿 Healthy
+                </button>
+                <button 
+                  className="quick-chip"
+                  onClick={() => setQuickScenario(16, 29.0, 35, 25000)}
+                >
+                  💧 Dry
+                </button>
+                <button 
+                  className="quick-chip"
+                  onClick={() => setQuickScenario(14, 38.0, 22, 55000)}
+                >
+                  🔥 Heat
+                </button>
+                <button 
+                  className="quick-chip"
+                  onClick={() => setQuickScenario(95, 18.0, 90, 1500)}
+                >
+                  🌊 Wet
+                </button>
+                <button 
+                  className="quick-chip water"
+                  onClick={quickWater}
+                  title="Simulate Watering"
+                >
+                  <Droplets size={12} />
+                  +Water
+                </button>
+              </div>
+            </div>
+
+            {/* 4 Sensor Telemetry Cards (Compact Grid) */}
+            <SensorGrid reading={reading} />
+
+            {/* High Priority Agronomic Alert (Visible only when stress is elevated) */}
+            {(isAlert || isWarning) ? (
+              <div className="alert-action-box" style={{ borderColor: `${diagnosis.color}40`, background: `${diagnosis.color}0c` }}>
+                <div className="alert-action-header" style={{ color: diagnosis.color }}>
+                  {isAlert ? <AlertTriangle size={16} /> : <Lightbulb size={16} />}
+                  <span>Recommended Action</span>
+                </div>
+                <div className="alert-action-text">
+                  {diagnosis.actions[0]}
+                </div>
+              </div>
+            ) : (
+              <div className="nominal-footer-note">
+                <span className="nominal-dot" />
+                <span>All telemetry metrics within target biological tolerance.</span>
+              </div>
+            )}
           </>
         )}
 
@@ -168,14 +190,9 @@ export default function App() {
           />
         )}
 
-        {/* Tab 3: Calibration Wizard */}
-        {activeTab === 'calibrate' && (
-          <CalibrationWizard />
-        )}
-
-        {/* Tab 4: Plant Species Profiles */}
-        {activeTab === 'profiles' && (
-          <PlantProfiles 
+        {/* Tab 3: Plant & Device Settings */}
+        {activeTab === 'settings' && (
+          <PlantAndDevice 
             selectedCrop={selectedCrop} 
             onSelectCrop={setSelectedCrop} 
           />
@@ -189,8 +206,8 @@ export default function App() {
           onClick={() => setActiveTab('dashboard')}
           id="nav-dashboard"
         >
-          <Activity size={20} />
-          <span>Dashboard</span>
+          <Activity size={19} />
+          <span>Monitor</span>
         </button>
 
         <button 
@@ -198,26 +215,17 @@ export default function App() {
           onClick={() => setActiveTab('simulator')}
           id="nav-simulator"
         >
-          <Sliders size={20} />
-          <span>Testbench</span>
+          <Sliders size={19} />
+          <span>Simulate</span>
         </button>
 
         <button 
-          className={`nav-item ${activeTab === 'calibrate' ? 'active' : ''}`}
-          onClick={() => setActiveTab('calibrate')}
-          id="nav-calibrate"
+          className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+          onClick={() => setActiveTab('settings')}
+          id="nav-settings"
         >
-          <Target size={20} />
-          <span>Calibrate</span>
-        </button>
-
-        <button 
-          className={`nav-item ${activeTab === 'profiles' ? 'active' : ''}`}
-          onClick={() => setActiveTab('profiles')}
-          id="nav-profiles"
-        >
-          <Sprout size={20} />
-          <span>Species</span>
+          <Settings size={19} />
+          <span>Plant & Device</span>
         </button>
       </nav>
     </div>

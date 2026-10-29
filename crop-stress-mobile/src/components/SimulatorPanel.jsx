@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Sliders, Play, Pause, Sparkles, Droplet } from 'lucide-react';
+import { Sliders, Play, Pause, Droplets, RotateCcw, AlertCircle, CheckCircle } from 'lucide-react';
+import { calculateStressProbability, CROP_ALERT_THRESHOLD } from '../services/cropModel';
 
 const PRESETS = [
   {
@@ -7,32 +8,35 @@ const PRESETS = [
     soil: 52,
     temp: 23.5,
     rh: 62,
-    lux: 15000,
-    desc: 'Optimal moisture, mild temperature, balanced light'
+    lux: 18000,
+  },
+  {
+    name: '💧 Dry Soil',
+    soil: 16,
+    temp: 29.0,
+    rh: 35,
+    lux: 25000,
   },
   {
     name: '🔥 Heatwave',
-    soil: 16,
-    temp: 36.8,
-    rh: 24,
-    lux: 48000,
-    desc: 'Severe dry soil & intense solar heat -> triggers alert'
+    soil: 14,
+    temp: 37.5,
+    rh: 22,
+    lux: 52000,
   },
   {
     name: '🌊 Overwatered',
     soil: 94,
-    temp: 18.2,
+    temp: 18.0,
     rh: 88,
-    lux: 1200,
-    desc: 'Waterlogged roots & low light'
+    lux: 1500,
   },
   {
     name: '❄️ Cold Shock',
-    soil: 38,
-    temp: 7.5,
-    rh: 45,
-    lux: 4500,
-    desc: 'Near-freezing temperatures'
+    soil: 40,
+    temp: 7.0,
+    rh: 48,
+    lux: 4000,
   }
 ];
 
@@ -45,12 +49,11 @@ export default function SimulatorPanel({ reading, onUpdateReading }) {
     if (!isAutoCycling) return;
     const interval = setInterval(() => {
       onUpdateReading((prev) => {
-        // Slowly dry soil by 0.4% every tick, fluctuate temp
-        const newSoil = Math.max(8, prev.soil_pct - 0.5);
-        const tempDelta = (Math.random() - 0.45) * 0.4;
+        const newSoil = Math.max(8, prev.soil_pct - 0.4);
+        const tempDelta = (Math.random() - 0.45) * 0.3;
         const newTemp = Math.min(42, Math.max(10, prev.temperature_c + tempDelta));
-        const newRh = Math.min(95, Math.max(15, prev.humidity_pct + (Math.random() - 0.5) * 0.8));
-        const newLux = Math.min(65000, Math.max(500, prev.light_lux + (Math.random() - 0.48) * 600));
+        const newRh = Math.min(95, Math.max(15, prev.humidity_pct + (Math.random() - 0.5) * 0.6));
+        const newLux = Math.min(65000, Math.max(500, prev.light_lux + (Math.random() - 0.48) * 500));
 
         return {
           soil_pct: parseFloat(newSoil.toFixed(1)),
@@ -77,32 +80,49 @@ export default function SimulatorPanel({ reading, onUpdateReading }) {
   const handleWater = () => {
     onUpdateReading((prev) => ({
       ...prev,
-      soil_pct: Math.min(92, prev.soil_pct + 35)
+      soil_pct: Math.min(90, Math.max(20, prev.soil_pct + 35))
     }));
   };
 
+  const currentScore = calculateStressProbability(reading);
+  const isAlert = currentScore >= CROP_ALERT_THRESHOLD;
+  const isWarning = currentScore >= 0.40 && !isAlert;
+  const scoreColor = isAlert ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981';
+
   return (
-    <div className="simulator-card" id="simulator-test-bench">
-      <div className="sim-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Sliders size={18} color="#38bdf8" />
-          <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fff' }}>
-            Virtual Sensor Testbench
-          </span>
+    <div className="sim-panel-container" id="simulator-test-bench">
+      {/* Live AI Response Preview Bar */}
+      <div className="sim-response-banner" style={{ borderColor: `${scoreColor}40` }}>
+        <div className="sim-response-left">
+          <div className="sim-score-badge" style={{ color: scoreColor, background: `${scoreColor}18` }}>
+            {(currentScore * 100).toFixed(0)}% STRESS
+          </div>
+          <div className="sim-response-text">
+            {isAlert ? '⚠️ Alert Triggered' : isWarning ? '⚡ Sub-optimal Vitals' : '✓ Normal Vitals'}
+          </div>
         </div>
-        <span className="sim-badge">MOCK HARDWARE ACTIVE</span>
+        <button
+          className="sim-water-btn"
+          onClick={handleWater}
+          id="btn-quick-water"
+          title="Simulate Watering"
+        >
+          <Droplets size={14} />
+          <span>Water (+35%)</span>
+        </button>
       </div>
 
-      <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: 12 }}>
-        Test edge AI classification and alert responses without physical sensors connected.
-      </p>
+      {/* Preset Pills */}
+      <div className="sim-section-header">
+        <span className="sim-section-title">Scenario Presets</span>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Tap to test condition</span>
+      </div>
 
-      {/* Preset Buttons */}
-      <div className="preset-pills">
+      <div className="preset-scroll-track">
         {PRESETS.map((p) => (
           <button
             key={p.name}
-            className={`preset-btn ${activePreset === p.name ? 'active' : ''}`}
+            className={`preset-chip ${activePreset === p.name ? 'active' : ''}`}
             onClick={() => applyPreset(p)}
           >
             {p.name}
@@ -110,13 +130,15 @@ export default function SimulatorPanel({ reading, onUpdateReading }) {
         ))}
       </div>
 
-      {/* Sliders for live manual tweaking */}
-      <div className="slider-group">
+      {/* Tuning Sliders */}
+      <div className="sim-slider-list">
         {/* Soil Moisture Slider */}
-        <div className="slider-row">
-          <div className="slider-labels">
-            <span>Soil Moisture</span>
-            <strong>{reading.soil_pct}%</strong>
+        <div className="sim-slider-card">
+          <div className="sim-slider-top">
+            <span className="sim-slider-label">Soil Moisture</span>
+            <span className="sim-slider-val" style={{ color: reading.soil_pct < 25 ? '#ef4444' : '#38bdf8' }}>
+              {reading.soil_pct}%
+            </span>
           </div>
           <input
             type="range"
@@ -132,10 +154,12 @@ export default function SimulatorPanel({ reading, onUpdateReading }) {
         </div>
 
         {/* Temperature Slider */}
-        <div className="slider-row">
-          <div className="slider-labels">
-            <span>Air Temperature</span>
-            <strong>{reading.temperature_c}°C</strong>
+        <div className="sim-slider-card">
+          <div className="sim-slider-top">
+            <span className="sim-slider-label">Air Temperature</span>
+            <span className="sim-slider-val" style={{ color: reading.temperature_c > 30 ? '#ef4444' : '#10b981' }}>
+              {reading.temperature_c}°C
+            </span>
           </div>
           <input
             type="range"
@@ -151,10 +175,12 @@ export default function SimulatorPanel({ reading, onUpdateReading }) {
         </div>
 
         {/* Humidity Slider */}
-        <div className="slider-row">
-          <div className="slider-labels">
-            <span>Relative Humidity</span>
-            <strong>{reading.humidity_pct}%</strong>
+        <div className="sim-slider-card">
+          <div className="sim-slider-top">
+            <span className="sim-slider-label">Relative Humidity</span>
+            <span className="sim-slider-val" style={{ color: '#34d399' }}>
+              {reading.humidity_pct}%
+            </span>
           </div>
           <input
             type="range"
@@ -170,10 +196,12 @@ export default function SimulatorPanel({ reading, onUpdateReading }) {
         </div>
 
         {/* Sunlight Lux Slider */}
-        <div className="slider-row">
-          <div className="slider-labels">
-            <span>Sunlight</span>
-            <strong>{reading.light_lux.toLocaleString()} lx</strong>
+        <div className="sim-slider-card">
+          <div className="sim-slider-top">
+            <span className="sim-slider-label">Sunlight</span>
+            <span className="sim-slider-val" style={{ color: '#fbbf24' }}>
+              {reading.light_lux.toLocaleString()} lx
+            </span>
           </div>
           <input
             type="range"
@@ -189,30 +217,15 @@ export default function SimulatorPanel({ reading, onUpdateReading }) {
         </div>
       </div>
 
-      {/* Action Controls */}
-      <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+      {/* Auto cycle simulation button */}
+      <div style={{ marginTop: 6 }}>
         <button
-          className="btn-primary"
-          style={{ flex: 1, background: '#0284c7' }}
-          onClick={handleWater}
-          id="btn-quick-water"
-        >
-          <Droplet size={15} />
-          Pour Water (+35%)
-        </button>
-
-        <button
-          className="btn-primary"
-          style={{
-            flex: 1,
-            background: isAutoCycling ? '#dc2626' : 'rgba(255, 255, 255, 0.08)',
-            border: '1px solid var(--border-subtle)'
-          }}
+          className={`sim-toggle-btn ${isAutoCycling ? 'running' : ''}`}
           onClick={() => setIsAutoCycling(!isAutoCycling)}
           id="btn-auto-simulate"
         >
           {isAutoCycling ? <Pause size={15} /> : <Play size={15} />}
-          {isAutoCycling ? 'Stop Dynamic Cycle' : 'Auto-Day Cycle'}
+          <span>{isAutoCycling ? 'Stop Dynamic Day Cycle' : 'Run Dynamic Day Cycle'}</span>
         </button>
       </div>
     </div>
