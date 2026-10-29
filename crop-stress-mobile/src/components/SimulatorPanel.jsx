@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sliders, Play, Pause, Droplets, RotateCcw, AlertCircle, CheckCircle } from 'lucide-react';
+import { Play, Pause, Droplets } from 'lucide-react';
 import { calculateStressProbability, CROP_ALERT_THRESHOLD } from '../services/cropModel';
 
 const PRESETS = [

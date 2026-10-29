@@ -1,44 +1,6 @@
 import React from 'react';
 import { Sprout, Check } from 'lucide-react';
-
-const CROPS = [
-  {
-    id: 'tomato',
-    name: 'Tomato (Solanum lycopersicum)',
-    category: 'Fruiting Crop',
-    moistureTarget: '50% - 75%',
-    tempIdeal: '20°C - 27°C',
-    lightNeeds: 'Full Sun (30k+ lx)',
-    tip: 'Sensitive to erratic watering which causes blossom end rot.'
-  },
-  {
-    id: 'lettuce',
-    name: 'Lettuce / Leafy Greens',
-    category: 'Greens',
-    moistureTarget: '60% - 80%',
-    tempIdeal: '16°C - 22°C',
-    lightNeeds: 'Moderate (15k - 25k lx)',
-    tip: 'Shallow root system; quickly bolts if ambient temperatures exceed 26°C.'
-  },
-  {
-    id: 'basil',
-    name: 'Sweet Basil (Ocimum basilicum)',
-    category: 'Herb',
-    moistureTarget: '45% - 65%',
-    tempIdeal: '22°C - 30°C',
-    lightNeeds: 'High (25k+ lx)',
-    tip: 'Loves heat; very vulnerable to cold drafts below 12°C.'
-  },
-  {
-    id: 'succulent',
-    name: 'Succulent / Cactus',
-    category: 'Xerophyte',
-    moistureTarget: '15% - 35%',
-    tempIdeal: '18°C - 32°C',
-    lightNeeds: 'Direct Sun (40k+ lx)',
-    tip: 'Thrives in dry, well-draining substrate. Extremely vulnerable to overwatering.'
-  }
-];
+import { CROPS } from '../data/cropProfiles';
 
 export default function PlantProfiles({ selectedCrop, onSelectCrop }) {
   return (

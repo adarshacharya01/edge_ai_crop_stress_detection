@@ -6,14 +6,14 @@ import {
   Settings, 
   AlertTriangle,
   Lightbulb,
-  Droplets,
-  ArrowRight
+  Droplets
 } from 'lucide-react';
 
 import StressGauge from './components/StressGauge';
 import SensorGrid from './components/SensorGrid';
 import SimulatorPanel from './components/SimulatorPanel';
-import PlantAndDevice, { CROPS } from './components/PlantAndDevice';
+import PlantAndDevice from './components/PlantAndDevice';
+import { CROPS } from './data/cropProfiles';
 
 import { calculateStressProbability, diagnoseCropState, CROP_ALERT_THRESHOLD } from './services/cropModel';
 

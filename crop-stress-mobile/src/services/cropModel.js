@@ -96,6 +96,18 @@ export function diagnoseCropState(reading, probability) {
           'Avoid wet soil during cold spells to prevent root damage.'
         ]
       };
+    } else if (light_lux > 48000 && temperature_c > 28) {
+      return {
+        severity: 'alert',
+        badge: 'SCORCH / RADIATION ALERT',
+        title: 'Excess Solar Radiation & Heat',
+        summary: 'Direct sunlight is intensely scorching foliage under warm conditions, risking photo-oxidation.',
+        color: '#f97316',
+        actions: [
+          'Deploy 40-50% shade cloth to filter peak afternoon rays.',
+          'Verify soil moisture to support leaf transpirational cooling.'
+        ]
+      };
     } else {
       return {
         severity: 'alert',
@@ -119,7 +131,8 @@ export function diagnoseCropState(reading, probability) {
       color: '#f59e0b',
       actions: [
         soil_pct < 35 ? 'Plan soil watering within the next 4-6 hours.' : 'Monitor soil moisture.',
-        temperature_c > 28 ? 'Increase natural cross-ventilation.' : 'Check ambient airflow.'
+        temperature_c > 28 ? 'Increase natural cross-ventilation.' : 'Check ambient airflow.',
+        light_lux > 40000 ? 'Filter intense midday sun.' : 'Lighting is adequate.'
       ]
     };
   } else {

@@ -29,7 +29,8 @@ bool crop_adc_init(void)
     VREF_GetDefaultConfig(&vrefConfig);
     VREF_Init(VREF0, &vrefConfig);
 
-    /* 2. Configure LPADC Clock: FRO 192 MHz divided by 10 */
+    /* 2. Configure LPADC Clock: Enable clock gate & FRO 192 MHz divided by 10 */
+    CLOCK_EnableClock(kCLOCK_Lpadc0);
     CLOCK_SetIpSrc(kCLOCK_Lpadc0, kCLOCK_IpSrcFro192M);
     CLOCK_SetIpSrcDiv(kCLOCK_Lpadc0, kSCG_SysClkDivBy10);
 

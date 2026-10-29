@@ -1,5 +1,4 @@
 import React from 'react';
-import { AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { CROP_ALERT_THRESHOLD } from '../services/cropModel';
 
 export default function StressGauge({ score, compact = true }) {

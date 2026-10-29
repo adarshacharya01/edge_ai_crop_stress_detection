@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, CheckCircle, Copy, Cpu, Info } from 'lucide-react';
+import { Target, CheckCircle, Copy, Cpu } from 'lucide-react';
 import { adcMvToSoilPct } from '../services/cropModel';
 
 export default function CalibrationWizard() {
