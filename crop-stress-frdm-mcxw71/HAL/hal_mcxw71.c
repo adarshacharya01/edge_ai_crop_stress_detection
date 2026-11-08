@@ -21,6 +21,7 @@
 #include "fsl_common.h"
 #include "fsl_port.h"
 #include "fsl_lpi2c.h"
+#include "fsl_debug_console.h"
 
 /**
  * @brief Configures PTB4 (SDA) and PTB5 (SCL) for LPI2C1 on FRDM-MCXW71.
@@ -54,6 +55,8 @@ bool hal_init(void)
     BOARD_BootClockRUN();
     BOARD_InitDebugConsole();
 
+    PRINTF("\r\n\r\n[BOOT] MCXW71 Debug Console Initialized (LPUART1 @ 115200)\r\n");
+
     /* Configure I2C Clock: FRO 192 MHz / 16 = 12 MHz */
     CLOCK_SetIpSrc(kCLOCK_Lpi2c1, kCLOCK_IpSrcFro192M);
     CLOCK_SetIpSrcDiv(kCLOCK_Lpi2c1, kSCG_SysClkDivBy16);
@@ -61,13 +64,16 @@ bool hal_init(void)
     /* Configure I2C Pins */
     init_i2c_pins();
 
-    /* Initialize LPADC and VREF for analog soil moisture and light sensing */
-    if (!crop_adc_init()) {
-        return false;
-    }
-
     /* Initialize DHT11 GPIO pin (J1 Pin 3 / D2 / PTC0) */
     dht11_init();
+    PRINTF("[BOOT] DHT11 GPIO (PTC0 / D2) Ready\r\n");
+
+    /* Initialize LPADC and VREF for analog soil moisture and light sensing */
+    if (!crop_adc_init()) {
+        PRINTF("[WARN] LPADC init failed - soil sensor will use fallback\r\n");
+    } else {
+        PRINTF("[BOOT] LPADC Soil Moisture (A0) Ready\r\n");
+    }
 
     /* Initialize LPI2C Master (100 kHz) */
     lpi2c_master_config_t config;
