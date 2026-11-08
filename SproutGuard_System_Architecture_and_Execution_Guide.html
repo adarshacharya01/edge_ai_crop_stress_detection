@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SproutGuard: Edge AI Crop Stress Monitoring - Architecture & Technical Execution Guide</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 16mm 20mm 16mm;
+      @bottom-right {
+        content: counter(page);
+        font-size: 9pt;
+        color: #64748b;
+      }
+    }
+    
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.55;
+      color: #1e293b;
+      background-color: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .header-banner {
+      border-bottom: 3px solid #10b981;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+
+    .project-badge {
+      display: inline-block;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      padding: 4px 10px;
+      font-size: 8.5pt;
+      font-weight: 700;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 22pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 4px 0 8px 0;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      font-size: 11.5pt;
+      color: #475569;
+      margin: 0;
+    }
+
+    .meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 9pt;
+      color: #64748b;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .meta-item strong {
+      color: #334155;
+    }
+
+    h2 {
+      font-size: 14pt;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 1.5px solid #e2e8f0;
+      padding-bottom: 6px;
+      margin-top: 26px;
+      margin-bottom: 12px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      font-size: 11.5pt;
+      font-weight: 700;
+      color: #047857;
+      margin-top: 18px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin: 0 0 10px 0;
+      text-align: justify;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .card h4 {
+      margin: 0 0 6px 0;
+      font-size: 10pt;
+      color: #0f172a;
+      font-weight: 700;
+    }
+
+    .card p {
+      font-size: 9pt;
+      margin: 0;
+      color: #475569;
+      text-align: left;
+    }
+
+    .step-box {
+      background: #f8fafc;
+      border-left: 4px solid #10b981;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      border-radius: 0 6px 6px 0;
+      page-break-inside: avoid;
+    }
+
+    .step-box.alert {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+    }
+
+    .step-box.warning {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+    }
+
+    .step-title {
+      font-weight: 700;
+      font-size: 10.5pt;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+
+    .step-desc {
+      font-size: 9.5pt;
+      color: #334155;
+      margin: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 7px 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f1f5f9;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 8.8pt;
+      background: #f1f5f9;
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: #0f766e;
+      border: 1px solid #e2e8f0;
+    }
+
+    pre {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 8.5pt;
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 10px 0;
+      line-height: 1.45;
+      page-break-inside: avoid;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      border: none;
+      padding: 0;
+    }
+
+    .highlight-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 6px;
+      padding: 12px;
+      margin: 12px 0;
+      font-size: 9.5pt;
+    }
+
+    .highlight-box strong {
+      color: #166534;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-banner">
+    <div class="project-badge">End-to-End IoT & Edge AI Specification</div>
+    <h1>SproutGuard: Edge AI Crop Stress Monitor</h1>
+    <p class="subtitle">Complete Technical Architecture, Execution Lifecycle, Bottleneck Resolution & Codebase Audit</p>
+    <div class="meta-bar">
+      <div class="meta-item"><strong>Target Hardware:</strong> NXP FRDM-MCXW71 (ARM Cortex-M33 @ 96 MHz)</div>
+      <div class="meta-item"><strong>Connectivity:</strong> Bluetooth Low Energy 5.3 (GATT Server)</div>
+      <div class="meta-item"><strong>Frontend Client:</strong> Android Hybrid App (Capacitor Native BLE + React 18)</div>
+      <div class="meta-item"><strong>Repository:</strong> edge_ai_crop_stress_detection (Branch: main)</div>
+    </div>
+  </div>
+
+  <h2>1. Project Overview & Architecture</h2>
+  <p>
+    <strong>SproutGuard</strong> is an intelligent edge-computing agritech telemetry system engineered to detect physiological crop stress directly at the soil level prior to visible phenotypic degradation. The system eliminates cloud transmission dependency and latency by computing crop stress indices directly onboard an energy-efficient microcontroller and streaming formatted telemetry over Bluetooth Low Energy (BLE) to a cross-platform mobile dashboard.
+  </p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>Microcontroller & Sensing Rig</h4>
+      <p>NXP FRDM-MCXW71 board reading analog soil probe (HW-103 on LPADC0), ambient light intensity (ALS-PT19 on LPADC0 Channel 2B), and ambient temperature & relative humidity (DHT11 single-wire bus on PTC0 / Arduino D2).</p>
+    </div>
+    <div class="card">
+      <h4>Onboard Edge AI Inference</h4>
+      <p>C-based embedded inference evaluating multidimensional crop tolerance profiles (Tomato, Leafy Greens, Sweet Basil, Succulents) based on water deficit, heat shock, VPD, and solar intensity within 11.8 ms.</p>
+    </div>
+    <div class="card">
+      <h4>Low Energy Telemetry Server</h4>
+      <p>Open, unauthenticated custom Wireless UART GATT profile broadcasting every 2 seconds via periodic OSA Timer Manager tasks to connected central devices without requiring OS-level PIN pairing.</p>
+    </div>
+    <div class="card">
+      <h4>Mobile Dashboard & UI</h4>
+      <p>High-performance React 18 application wrapped in Capacitor. Features line-buffered packet reassembly, safe-area layout compliance, live radial stress gauges, and real-time biological health diagnostics.</p>
+    </div>
+  </div>
+
+  <h2>2. Step-by-Step Project Execution Lifecycle</h2>
+  <p>Below is the complete execution pipeline from physical power-on to live UI rendering:</p>
+
+  <div class="step-box">
+    <div class="step-title">Step 1: Board Boot & Peripheral Clock Gating</div>
+    <div class="step-desc">
+      On hardware reset, <code>main()</code> invokes board initialization:
+      <ul>
+        <li>Core clock is ramped to 96 MHz via the internal FRO (Fast Reference Oscillator).</li>
+        <li>Clocks for Port A, Port B, Port C, and GPIO peripherals are enabled via <code>CLOCK_EnableClock()</code>.</li>
+        <li>Cortex-M33 <strong>DWT (Data Watchpoint and Trace)</strong> cycle counter is activated via <code>CoreDebug-&gt;DEMCR</code> and <code>DWT-&gt;CTRL</code> to facilitate deterministic sub-microsecond timing for digital single-wire sensor protocols.</li>
+        <li>LPADC0 (Low Power ADC) peripheral clock is driven at 48 MHz with 3.3V VDD reference (<code>kLPADC_ReferenceVoltageAlt1</code>). Analog input pins (PTD1, PTD2, PTD3, PTA4, PTB2, PTB3) are isolated from digital buffers by muxing to <code>kPORT_PinDisabledOrAnalog</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 2: BLE Subsystem & Wireless UART Advertisement</div>
+    <div class="step-desc">
+      The Bluetooth Low Energy Host stack initializes:
+      <ul>
+        <li>Initializes link layer controller and host tasks.</li>
+        <li>Registers GATT Database containing the Wireless UART Service (<code>01ff0100-ba5e-f4ee-5ca1-eb1e5e4b1ce0</code>) and characteristic (<code>01ff0101-ba5e-f4ee-5ca1-eb1e5e4b1ce0</code>) configured with Notify and Read properties.</li>
+        <li>The Client Characteristic Configuration Descriptor (CCCD, UUID <code>0x2902</code>) is exposed with open read/write permissions. Pairing and bonding flags are explicitly cleared (<code>gAppUsePairing_d = 0</code>, <code>gAppUseBonding_d = 0</code>).</li>
+        <li>The radio broadcasts non-connectable and connectable undirected advertising packets tagged with the complete local name <strong>"NXP_WU"</strong>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 3: Periodic Sensor Acquisition & Edge AI Inference Tick</div>
+    <div class="step-desc">
+      A dedicated Timer Manager interval timer fires every 2 seconds via <code>CropTelemetryTimerCallback()</code>:
+      <ul>
+        <li><strong>DHT11 Digital Read:</strong> The MCU drives PTC0 LOW for 20 ms, releases HIGH for 30 &mu;s, and switches to input with internal pull-up. It measures forty subsequent 50 &mu;s/70 &mu;s pulse durations using the DWT cycle counter with interrupts disabled to prevent RTOS jitter. Validates parity checksum (Byte0 + Byte1 + Byte2 + Byte3 == Byte4).</li>
+        <li><strong>Soil Moisture ADC:</strong> LPADC0 triggers conversion on Channel 5 (PTD1 / A0) and Channel 6 (PTD2 / A1). Converts raw millivolts to percentage using HW-103 calibration (470 mV dry = 0%, 180 mV saturated = 100%).</li>
+        <li><strong>Ambient Light Lux:</strong> Reads onboard ALS-PT19 phototransistor channel (ADC0 Channel 2 Side B) and scales millivolts to Lux.</li>
+        <li><strong>Edge AI Stress Computation:</strong> <code>CalculateCropStressScore()</code> executes the multidimensional biological matrix to produce a real-time stress probability score (0.00 to 1.00).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 4: Safe JSON Formatting & GATT Chunk Dispatch</div>
+    <div class="step-desc">
+      The telemetry packet is compiled and dispatched over the air:
+      <ul>
+        <li>To bypass embedded <code>newlib-nano</code> floating-point limitations, values are encoded into integer decimal components (whole and fractional tenths):
+        <pre><code>snprintf(json_buf, sizeof(json_buf),
+         "{\"soil\":%d.%d,\"temp\":%d.%d,\"hum\":%d.%d,\"lux\":%lu,\"stress\":%d.%d}\r\n",
+         soil_whole, soil_frac, temp_whole, temp_frac, hum_whole, hum_frac,
+         (unsigned long)live_lux, stress_whole, stress_frac);</code></pre>
+        </li>
+        <li>The full string is written into the local GATT DB attribute using <code>GattDb_WriteAttribute()</code>.</li>
+        <li>If a central peer is connected, <code>BleApp_SendUartStream()</code> divides the string into ATT MTU-compatible chunks (typically 20 bytes) and transmits them sequentially via <code>GattServer_SendInstantValueNotification()</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 5: Mobile App Discovery, Connection & Subscription</div>
+    <div class="step-desc">
+      The user opens the SproutGuard mobile app and initiates connection:
+      <ul>
+        <li><code>bleManager.js</code> uses <code>@capacitor-community/bluetooth-le</code> on native Android (or Web Bluetooth API in browser) to scan for devices with the name <code>NXP_WU</code>.</li>
+        <li>Upon selection, the client establishes a direct GATT link, discovering the Wireless UART service.</li>
+        <li>The client writes <code>0x0001</code> to the CCCD descriptor of characteristic <code>01ff0101-ba5e-f4ee-5ca1-eb1e5e4b1ce0</code>, enabling notifications on the MCU.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="step-box">
+    <div class="step-title">Step 6: Stream Reassembly, Resilient Parsing & UI Update</div>
+    <div class="step-desc">
+      Notification chunks arrive asynchronously at the client:
+      <ul>
+        <li><code>_handleDataView()</code> decodes incoming hex/binary payloads and appends them to a continuous string buffer (<code>rxBuffer</code>).</li>
+        <li>Line-buffered processor extracts tokens delimited by newline (<code>\n</code>), sanitizes any missing or broken JSON tokens, and invokes <code>JSON.parse()</code>. A secondary regex parser acts as a fail-safe.</li>
+        <li>The parsed telemetry object is dispatched to React state hooks in <code>App.jsx</code>, updating the Soil, Temperature, Humidity, Sunlight cards, radial stress meter, and agronomic diagnostic actions in real time.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <h2>3. Technical Challenges & Engineering Solutions</h2>
+  <p>The following engineering hurdles were identified, audited, and resolved throughout the development lifecycle:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 28%;">Symptom & Error</th>
+        <th style="width: 34%;">Root Cause Diagnosis</th>
+        <th style="width: 38%;">Implemented Permanent Solution</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Android System Settings:</strong><br><em>"Failed to connect to NXP_WU. The connection request was rejected."</em> (HCI Reason <code>0x113</code>)</td>
+        <td>Pairing via the native Android OS Bluetooth menu initiates Classic Bluetooth Audio (A2DP) / HID profile lookups. The board is configured as an unauthenticated BLE GATT server; when PIN negotiation failed, the OS forcibly closed the L2CAP link.</td>
+        <td>Disabled pairing/bonding entirely in MCU firmware (<code>gAppUsePairing_d = 0</code>, <code>gAppUseBonding_d = 0</code>). Enforced app-exclusive connection routing via Capacitor BLE client with visual instructions advising users to connect in-app.</td>
+      </tr>
+      <tr>
+        <td><strong>Blank Widgets Lockout:</strong><br>App displays <em>"CONNECTED - LIVE"</em>, but all 5 dashboard cards remain stuck at <code>--</code>.</td>
+        <td><strong>Embedded Newlib-Nano Bug:</strong> In standard GCC ARM Embedded builds, <code>snprintf()</code> omits floating-point <code>%f</code> formatting by default to save flash. The MCU was transmitting <code>{"soil":,"temp":,"hum":,"lux":859,"stress":}</code>. The missing values caused <code>JSON.parse()</code> to crash with an unhandled <code>SyntaxError</code> every cycle.</td>
+        <td>Refactored the MCU telemetry formatter to compute integer whole and fractional decimal digits explicitly (<code>%d.%d</code>). In the mobile frontend, added pre-parse JSON colon sanitization and robust regex fallback matching.</td>
+      </tr>
+      <tr>
+        <td><strong>Link Drops & Read Error:</strong><br>BLE connection drops within 6–10 seconds after connecting; log shows <code>[BLE Native] read error</code>.</td>
+        <td>A client-side 3-second background polling interval was executing concurrent <code>GattRead</code> calls on the exact characteristic that was simultaneously streaming periodic notifications, provoking GATT transaction collisions and queue overflow in the Android Bluetooth stack.</td>
+        <td>Decommissioned the automatic 3-second polling timer in <code>bleManager.js</code>. The link now relies exclusively on clean 2-second MCU push notifications, preserving the GATT read mechanism solely for on-demand manual sync button presses.</td>
+      </tr>
+      <tr>
+        <td><strong>Duplicate BLE Packets:</strong><br>Incoming notification stream showed corrupted and fragmented JSON lines arriving out of sequence.</td>
+        <td>In <code>wireless_uart.c</code>, after splitting and sending the string through <code>GattServer_SendInstantValueNotification()</code>, an extraneous call to <code>GattServer_SendNotification()</code> was executed, inserting a redundant truncated packet into the radio transmit queue.</td>
+        <td>Eliminated the duplicate notification dispatch from the loop, ensuring strictly ordered, single-transmission packet delivery.</td>
+      </tr>
+      <tr>
+        <td><strong>DHT11 Communication Failures:</strong><br>Zero temperature and humidity readings or intermittent checksum errors.</td>
+        <td>Microsecond timing errors caused by RTOS interrupts preempting the single-wire timing loop, coupled with floating input pins lacking unmasked digital buffers in the port PIDR register.</td>
+        <td>Wrapped the 40-bit transmission window in <code>__disable_irq()</code> and <code>__enable_irq()</code>. Explicitly unmasked input buffers via <code>GPIO_PortInputEnable()</code>, enabled internal pull-up resistors, and utilized hardware Cortex-M33 DWT cycle counters.</td>
+      </tr>
+      <tr>
+        <td><strong>Header Layout Clipping:</strong><br>App title and status pill overlapped with phone status bar (clock, battery, Wi-Fi icons).</td>
+        <td>Missing safe-area inset padding on modern Android Edge-to-Edge displays with punch-hole cameras.</td>
+        <td>Configured <code>pt-[max(env(safe-area-inset-top),20px)]</code> across the root header layout, providing clean 20px clearance below system status icons.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>4. Key Source Code Breakdown</h2>
+
+  <h3>1. Firmware: <code>crop-stress-frdm-mcxw71/source/wireless_uart.c</code></h3>
+  <p>
+    Core application logic and BLE GATT event controller. Key functions include:
+  </p>
+  <ul>
+    <li><code>CropTelemetryTimerCallback(void *pParam)</code>: 2-second periodic timer hook that samples DHT11, soil LPADC, and phototransistor, evaluates the Edge AI stress model, builds the integer-decimal formatted JSON buffer, writes the GATT DB attribute, and triggers BLE notifications.</li>
+    <li><code>BleApp_SendUartStream(uint8_t *pRecvStream, uint8_t streamSize)</code>: Inspects current ATT MTU (negotiated or default 23 bytes) and chunks outgoing packets into payload-safe frames (MTU &minus; 3) dispatched via <code>GattServer_SendInstantValueNotification()</code>.</li>
+    <li><code>BleApp_GattServerCallback()</code>: Handles central descriptor writes (CCCD enabling notifications).</li>
+  </ul>
+
+  <h3>2. Firmware: <code>crop-stress-frdm-mcxw71/source/board_adc.c</code> & <code>dht11.c</code></h3>
+  <p>
+    Hardware abstraction drivers for physical crop sensing:
+  </p>
+  <ul>
+    <li><code>crop_adc_init()</code>: Configures LPADC0 with 48 MHz FRO clock, auto-calibration, and 3.3V reference voltage.</li>
+    <li><code>BOARD_ReadSoilAdcMv()</code> & <code>CalculateSoilMoisturePercent()</code>: Reads capacitive sensor millivolts on PTD1/PTD2 and maps them to a calibrated volumetric moisture scale.</li>
+    <li><code>BOARD_ReadAmbientLightLux()</code>: Reads the ALS-PT19 phototransistor channel and calculates illuminance.</li>
+    <li><code>DHT11_Read(float *hum, float *temp)</code>: Executes start pulse protocol, reads 40 bit-pulses using Cortex-M33 DWT hardware cycle timing, verifies 8-bit checksum, and caches last valid values to prevent dropouts.</li>
+  </ul>
+
+  <h3>3. Mobile Client: <code>crop-stress-mobile/src/services/bleManager.js</code></h3>
+  <p>
+    Unified Bluetooth transport abstraction supporting both Native Android (via Capacitor) and Web Bluetooth:
+  </p>
+  <ul>
+    <li><code>connect()</code>: Routes connection through native device scanner or Web Bluetooth dialog.</li>
+    <li><code>_handleDataView(rawVal)</code>: Normalizes DataView, Uint8Array, and string payloads from the native bridge.</li>
+    <li><code>_appendAndProcessRxString(chunk)</code>: Assembles incoming packet fragments into a FIFO buffer, splits strings on newline delimiters (<code>\n</code>), sanitizes syntax anomalies, and dispatches JSON objects to listeners.</li>
+    <li><code>_parseLine(str)</code>: Dual-engine parser that combines strict JSON evaluation with regex-based key-value extraction for fault tolerance.</li>
+  </ul>
+
+  <h3>4. Frontend Interface: <code>crop-stress-mobile/src/App.jsx</code></h3>
+  <p>
+    Top-level React application component:
+  </p>
+  <ul>
+    <li><code>updateTelemetryUI(data)</code>: Receives telemetry payloads and updates individual state hooks (<code>soilMoisture</code>, <code>temperature</code>, <code>humidity</code>, <code>light</code>, <code>liveStressScore</code>) while preserving previous state during transient null frames.</li>
+    <li><code>diagnoseCropState()</code>: Evaluates live telemetry against selected crop thresholds (Tomato, Basil, Greens, Succulent) to provide immediate agricultural remediation instructions.</li>
+  </ul>
+
+  <div class="highlight-box">
+    <strong>Production Verification:</strong> The entire firmware binary was compiled with Ninja and verified on target hardware using LinkServer v26.9. The mobile application was packaged via Gradle into an Android APK and deployed to the connected physical device (OPPO Reno15c 5G). Live data verification confirmed continuous streaming of soil (98.6%), temperature (34.0&deg;C), humidity (76.0%), sunlight (30 lx), and stress score (0.21).
+  </div>
+
+</body>
+</html>
