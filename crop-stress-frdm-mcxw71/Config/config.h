@@ -8,13 +8,17 @@
 #define CROP_SAMPLE_INTERVAL_MS    5000U
 #define CROP_ALERT_PROBABILITY     0.70f
 
-/* Soil Moisture Sensor Voltage Calibration (Millivolts) */
+/* Soil Moisture Sensor Voltage Calibration (Millivolts)
+ * For HW-103 (Resistive Soil Moisture Sensor):
+ *   - Dry air (open probe) : ~150 - 300 mV  -> 0% Moisture
+ *   - Moist soil / Water   : ~1800 - 2800 mV -> 100% Moisture
+ */
 #ifndef CROP_SOIL_DRY_MV
-#define CROP_SOIL_DRY_MV           2600.0f  /* Measured dry-air probe voltage (~2.6V) */
+#define CROP_SOIL_DRY_MV           200.0f   /* Measured dry-air probe voltage (~0.2V) */
 #endif
 
 #ifndef CROP_SOIL_WET_MV
-#define CROP_SOIL_WET_MV           1100.0f  /* Measured in water probe voltage (~1.1V) */
+#define CROP_SOIL_WET_MV           2400.0f  /* Measured wet soil/water probe voltage (~2.4V) */
 #endif
 
 /* --------------------------------------------------------------------------
