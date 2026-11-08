@@ -6,5 +6,5 @@
 
 int main(void)
 {
-    return app_run();
+     return app_run();
 }

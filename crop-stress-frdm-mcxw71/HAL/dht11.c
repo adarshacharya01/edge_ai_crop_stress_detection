@@ -1,14 +1,9 @@
 /**
  * @file dht11.c
- * @brief Universal high-precision DHT11 single-wire bit-bang driver for FRDM-MCXW71.
+ * @brief High-precision DHT11 driver for FRDM-MCXW71.
  *
- * Scans all candidate Arduino header pins on J1:
- *   - D2: PTC4
- *   - D3: PTC1
- *   - D4: PTA19
- *   - D5: PTC2
- *   - D6: PTA20
- *   - D7: PTA21
+ * Configures D2 (PTC0) as a bidirectional GPIO with internal pull-up.
+ * Uses Cortex-M33 hardware DWT cycle counter for sub-microsecond precision timing.
  */
 
 #if __has_include("HAL/dht11.h")
@@ -24,33 +19,27 @@
 #include "fsl_gpio.h"
 #include "fsl_common.h"
 
-typedef struct {
-    const char *name;
-    PORT_Type  *port;
-    GPIO_Type  *gpio;
-    uint32_t   pin;
-    clock_ip_name_t clock_ip;
-} dht11_pin_desc_t;
+/* Primary D2 Pin: PTC0 (Port C, Pin 0) */
+#define DHT11_D2_PTC0_PORT       PORTC
+#define DHT11_D2_PTC0_GPIO       GPIOC
+#define DHT11_D2_PTC0_PIN        0U
 
-static const dht11_pin_desc_t k_dht11_pins[] = {
-    {"D2 (J1 Pin 3 / PTC4)",  PORTC, GPIOC, 4U,  kCLOCK_PortC},
-    {"D3 (J1 Pin 4 / PTC1)",  PORTC, GPIOC, 1U,  kCLOCK_PortC},
-    {"D4 (J1 Pin 5 / PTA19)", PORTA, GPIOA, 19U, kCLOCK_PortA},
-    {"D5 (J1 Pin 6 / PTC2)",  PORTC, GPIOC, 2U,  kCLOCK_PortC},
-    {"D6 (J1 Pin 7 / PTA20)", PORTA, GPIOA, 20U, kCLOCK_PortA},
-    {"D7 (J1 Pin 8 / PTA21)", PORTA, GPIOA, 21U, kCLOCK_PortA}
-};
-
-#define NUM_DHT11_PINS (sizeof(k_dht11_pins) / sizeof(k_dht11_pins[0]))
+/* Alternate D2 Pin: PTC4 (Port C, Pin 4) */
+#define DHT11_D2_PTC4_PORT       PORTC
+#define DHT11_D2_PTC4_GPIO       GPIOC
+#define DHT11_D2_PTC4_PIN        4U
 
 static dht11_status_t s_last_status  = DHT11_STATUS_IDLE_LOW;
-static const char    *s_last_pin_str = "D2 (J1 Pin 3 / PTC4)";
+static const char    *s_last_pin_str = "D2 (PTC0)";
 
-static inline uint32_t us_to_cycles(uint32_t us)
+static inline uint32_t us_to_cycles(uint32_t us, uint32_t clk_hz)
 {
-    return us * (SystemCoreClock / 1000000U);
+    return us * (clk_hz / 1000000U);
 }
 
+/**
+ * @brief Configure pin as bidirectional GPIO with internal pull-up and PIDR input enabled.
+ */
 static void config_pin_as_gpio(PORT_Type *port, GPIO_Type *gpio, uint32_t pin)
 {
     const port_pin_config_t pin_cfg = {
@@ -67,7 +56,7 @@ static void config_pin_as_gpio(PORT_Type *port, GPIO_Type *gpio, uint32_t pin)
     PORT_SetPinConfig(port, pin, &pin_cfg);
 
 #if defined(FSL_FEATURE_GPIO_HAS_PORT_INPUT_CONTROL) && FSL_FEATURE_GPIO_HAS_PORT_INPUT_CONTROL
-    /* CRITICAL for MCXW71: Enable digital input buffer in PIDR! */
+    /* Enable digital input buffer in PIDR (required on MCXW71) */
     GPIO_PortInputEnable(gpio, 1U << pin);
 #endif
 
@@ -78,24 +67,24 @@ static void config_pin_as_gpio(PORT_Type *port, GPIO_Type *gpio, uint32_t pin)
 
 void dht11_init(void)
 {
-    /* Enable port clocks */
-    CLOCK_EnableClock(kCLOCK_PortA);
+    /* Enable Port C Clock */
     CLOCK_EnableClock(kCLOCK_PortC);
 
-    /* Initialize DWT cycle counter for microsecond timing */
+    /* Initialize DWT hardware cycle counter */
     MSDK_EnableCpuCycleCounter();
 
-    /* Configure all candidate pins */
-    for (size_t i = 0; i < NUM_DHT11_PINS; ++i) {
-        CLOCK_EnableClock(k_dht11_pins[i].clock_ip);
-        config_pin_as_gpio(k_dht11_pins[i].port, k_dht11_pins[i].gpio, k_dht11_pins[i].pin);
-    }
+    /* Configure PTC0 (primary) and PTC4 (alternate) */
+    config_pin_as_gpio(DHT11_D2_PTC0_PORT, DHT11_D2_PTC0_GPIO, DHT11_D2_PTC0_PIN);
+    config_pin_as_gpio(DHT11_D2_PTC4_PORT, DHT11_D2_PTC4_GPIO, DHT11_D2_PTC4_PIN);
 }
 
-static inline bool wait_level(GPIO_Type *gpio, uint32_t pin, uint32_t target_level, uint32_t timeout_us)
+/**
+ * @brief Wait for the pin to reach target_level with a microsecond hardware timeout.
+ */
+static inline bool wait_level(GPIO_Type *gpio, uint32_t pin, uint32_t target_level, uint32_t timeout_us, uint32_t clk_hz)
 {
     uint32_t start = MSDK_GetCpuCycleCount();
-    uint32_t timeout_cycles = us_to_cycles(timeout_us);
+    uint32_t timeout_cycles = us_to_cycles(timeout_us, clk_hz);
 
     while (((gpio->PDIR >> pin) & 1U) != target_level) {
         if ((MSDK_GetCpuCycleCount() - start) > timeout_cycles) {
@@ -108,61 +97,64 @@ static inline bool wait_level(GPIO_Type *gpio, uint32_t pin, uint32_t target_lev
 static dht11_status_t dht11_read_channel(GPIO_Type *gpio, uint32_t pin, float *temperature_c, float *humidity_pct)
 {
     uint8_t data[5] = {0U, 0U, 0U, 0U, 0U};
-    uint32_t threshold_cycles = us_to_cycles(45U);
+    uint32_t clk_hz = CLOCK_GetCoreSysClkFreq();
+    if (clk_hz == 0U) {
+        clk_hz = SystemCoreClock;
+    }
+    uint32_t threshold_cycles = us_to_cycles(45U, clk_hz);
 
     /* Check if line is idle HIGH */
     gpio->PDDR &= ~(1U << pin);
-    SDK_DelayAtLeastUs(10U, SystemCoreClock);
+    SDK_DelayAtLeastUs(10U, clk_hz);
     if (((gpio->PDIR >> pin) & 1U) == 0U) {
         gpio->PDDR |= (1U << pin);
         gpio->PSOR = (1U << pin);
         return DHT11_STATUS_IDLE_LOW;
     }
 
-    /* Step 1: Send Host Start Signal (pull LOW for 25 ms) */
+    /* 1. Start Signal: drive line LOW for 20 ms (guaranteeing >= 18 ms) */
     gpio->PDDR |= (1U << pin);
     gpio->PCOR = (1U << pin);
-    SDK_DelayAtLeastUs(25000U, SystemCoreClock);
+    SDK_DelayAtLeastUs(20000U, clk_hz);
 
-    /* Actively drive HIGH for 30 us to provide sharp rising edge */
+    /* 2. Drive line HIGH for 30 us */
     gpio->PSOR = (1U << pin);
-    SDK_DelayAtLeastUs(30U, SystemCoreClock);
+    SDK_DelayAtLeastUs(30U, clk_hz);
 
-    /* Step 2: Critical section - switch to input */
+    /* 3. Switch to INPUT with pull-up enabled (critical section) */
     uint32_t primask = DisableGlobalIRQ();
-
     gpio->PDDR &= ~(1U << pin);
 
-    /* Step 3: Wait for DHT11 response LOW (~80 us) */
-    if (!wait_level(gpio, pin, 0U, 200U)) {
+    /* 4. Timeout waiting for sensor to pull line LOW (120 us timeout) */
+    if (!wait_level(gpio, pin, 0U, 120U, clk_hz)) {
         EnableGlobalIRQ(primask);
         gpio->PDDR |= (1U << pin);
         gpio->PSOR = (1U << pin);
         return DHT11_STATUS_NO_RESPONSE_LOW;
     }
 
-    /* Wait for DHT11 response HIGH (~80 us) */
-    if (!wait_level(gpio, pin, 1U, 200U)) {
+    /* 5. Wait for sensor to pull line HIGH (~80 us) */
+    if (!wait_level(gpio, pin, 1U, 120U, clk_hz)) {
         EnableGlobalIRQ(primask);
         gpio->PDDR |= (1U << pin);
         gpio->PSOR = (1U << pin);
         return DHT11_STATUS_NO_RESPONSE_HIGH;
     }
 
-    /* Wait for DHT11 to pull LOW (start of data bit 0) */
-    if (!wait_level(gpio, pin, 0U, 200U)) {
+    /* 6. Wait for sensor to pull line LOW (start of data bit 0) */
+    if (!wait_level(gpio, pin, 0U, 120U, clk_hz)) {
         EnableGlobalIRQ(primask);
         gpio->PDDR |= (1U << pin);
         gpio->PSOR = (1U << pin);
         return DHT11_STATUS_NO_RESPONSE_LOW;
     }
 
-    /* Step 4: Read 40 data bits */
+    /* 7. Sample 40 bits cleanly */
     for (int byte_i = 0; byte_i < 5; ++byte_i) {
         uint8_t byte_val = 0U;
         for (int bit_i = 7; bit_i >= 0; --bit_i) {
             /* Wait for bit start (HIGH pulse) */
-            if (!wait_level(gpio, pin, 1U, 120U)) {
+            if (!wait_level(gpio, pin, 1U, 100U, clk_hz)) {
                 EnableGlobalIRQ(primask);
                 gpio->PDDR |= (1U << pin);
                 gpio->PSOR = (1U << pin);
@@ -172,13 +164,14 @@ static dht11_status_t dht11_read_channel(GPIO_Type *gpio, uint32_t pin, float *t
             uint32_t t_start = MSDK_GetCpuCycleCount();
 
             /* Wait for bit end (LOW pulse) */
-            if (!wait_level(gpio, pin, 0U, 140U)) {
+            if (!wait_level(gpio, pin, 0U, 120U, clk_hz)) {
                 EnableGlobalIRQ(primask);
                 gpio->PDDR |= (1U << pin);
                 gpio->PSOR = (1U << pin);
                 return DHT11_STATUS_BIT_TIMEOUT;
             }
 
+            /* Measure pulse width: ~26-30 us = 0, ~70 us = 1 */
             if ((MSDK_GetCpuCycleCount() - t_start) > threshold_cycles) {
                 byte_val |= (uint8_t)(1U << bit_i);
             }
@@ -188,11 +181,11 @@ static dht11_status_t dht11_read_channel(GPIO_Type *gpio, uint32_t pin, float *t
 
     EnableGlobalIRQ(primask);
 
-    /* Restore pin to output HIGH (idle) */
+    /* Restore idle state */
     gpio->PDDR |= (1U << pin);
     gpio->PSOR = (1U << pin);
 
-    /* Step 5: Checksum Verification */
+    /* 8. Validate 8-bit checksum */
     uint8_t checksum = (uint8_t)((data[0] + data[1] + data[2] + data[3]) & 0xFFU);
     if (checksum != data[4] || (data[0] == 0U && data[2] == 0U)) {
         return DHT11_STATUS_CHECKSUM_ERROR;
@@ -209,22 +202,21 @@ bool dht11_read(float *temperature_c, float *humidity_pct)
         return false;
     }
 
-    /* Scan candidate pins on J1 */
-    for (size_t i = 0; i < NUM_DHT11_PINS; ++i) {
-        dht11_status_t st = dht11_read_channel(k_dht11_pins[i].gpio, k_dht11_pins[i].pin, temperature_c, humidity_pct);
-        if (st == DHT11_STATUS_OK) {
-            s_last_pin_str = k_dht11_pins[i].name;
-            s_last_status = DHT11_STATUS_OK;
-            return true;
-        }
+    /* 1. Try D2 as PTC0 (Primary as specified) */
+    s_last_pin_str = "D2 (PTC0)";
+    s_last_status = dht11_read_channel(DHT11_D2_PTC0_GPIO, DHT11_D2_PTC0_PIN, temperature_c, humidity_pct);
+    if (s_last_status == DHT11_STATUS_OK) {
+        return true;
+    }
 
-        /* If this was D2 (the primary configured pin), record its failure status */
-        if (i == 0) {
-            s_last_status = st;
-            s_last_pin_str = k_dht11_pins[0].name;
-        }
+    SDK_DelayAtLeastUs(2000U, SystemCoreClock);
 
-        SDK_DelayAtLeastUs(2000U, SystemCoreClock);
+    /* 2. Try D2 as PTC4 (Board Schematic net CAN0_TX via SH3) */
+    dht11_status_t st_ptc4 = dht11_read_channel(DHT11_D2_PTC4_GPIO, DHT11_D2_PTC4_PIN, temperature_c, humidity_pct);
+    if (st_ptc4 == DHT11_STATUS_OK) {
+        s_last_pin_str = "D2 (PTC4)";
+        s_last_status = DHT11_STATUS_OK;
+        return true;
     }
 
     return false;
