@@ -13,8 +13,17 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+typedef enum {
+    DHT11_STATUS_OK = 0,
+    DHT11_STATUS_IDLE_LOW,
+    DHT11_STATUS_NO_RESPONSE_LOW,
+    DHT11_STATUS_NO_RESPONSE_HIGH,
+    DHT11_STATUS_BIT_TIMEOUT,
+    DHT11_STATUS_CHECKSUM_ERROR
+} dht11_status_t;
+
 /**
- * @brief Initialize the PTC0 GPIO pin with internal pull-up and enable DWT counter.
+ * @brief Initialize the GPIO pins (D2/D3/D4) with internal pull-up and enable DWT counter.
  */
 void dht11_init(void);
 
@@ -26,5 +35,15 @@ void dht11_init(void);
  * @return true on success (checksum verified), false on timeout or checksum mismatch.
  */
 bool dht11_read(float *temperature_c, float *humidity_pct);
+
+/**
+ * @brief Return a human-readable diagnostic message describing the last read attempt.
+ */
+const char *dht11_get_status_str(void);
+
+/**
+ * @brief Return which pin last succeeded or was attempted ("D2 (PTC4)", "D4 (PTA19)", etc.).
+ */
+const char *dht11_get_active_pin_str(void);
 
 #endif /* CROP_DHT11_H */

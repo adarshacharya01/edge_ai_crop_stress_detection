@@ -2,12 +2,14 @@
 #include "APP/app.h"
 #include "Config/config.h"
 #include "HAL/hal.h"
+#include "HAL/dht11.h"
 #include "Model/model.h"
 #include "Sensors/sensors.h"
 #else
 #include "app.h"
 #include "config.h"
 #include "hal.h"
+#include "dht11.h"
 #include "model.h"
 #include "sensors.h"
 #endif
@@ -89,6 +91,7 @@ int app_run(void)
         PRINTF(" 🌡️  DHT11 (J1 Pin 3 / D2) :\r\n");
         if (reading.air_valid) {
             float temp_f = (reading.temperature_c * 9.0f / 5.0f) + 32.0f;
+            PRINTF("     Pin         : %s\r\n", dht11_get_active_pin_str());
             PRINTF("     Temperature : ");
             print_float(reading.temperature_c, 1);
             PRINTF(" *C  (");
@@ -99,7 +102,7 @@ int app_run(void)
             print_float(reading.humidity_pct, 1);
             PRINTF(" %%RH\r\n");
         } else {
-            PRINTF("     [!] Waiting for data / check D2 wire & 3.3V connection\r\n");
+            PRINTF("     [!] Status  : %s\r\n", dht11_get_status_str());
         }
 
         /* 2. Soil Moisture (HW-103) */
@@ -113,13 +116,14 @@ int app_run(void)
 
             const char *soil_desc = "Optimal";
             if (reading.soil_pct < 25.0f) {
-                soil_desc = "DRY (Needs water!)";
+                soil_desc = "DRY (In dry air / Needs water)";
             } else if (reading.soil_pct > 80.0f) {
                 soil_desc = "VERY WET / Saturated";
             } else {
                 soil_desc = "NORMAL / MOIST";
             }
             PRINTF("     Condition   : %s\r\n", soil_desc);
+            PRINTF("     [Tip: Dip probe in water/wet soil to see moisture %% rise!]\r\n");
         } else {
             PRINTF("     [!] ADC conversion error (Check A0 probe connection)\r\n");
         }
