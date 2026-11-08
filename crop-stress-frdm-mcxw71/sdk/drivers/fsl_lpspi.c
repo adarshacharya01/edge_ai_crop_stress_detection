@@ -1334,8 +1334,10 @@ status_t LPSPI_MasterTransferBlocking(LPSPI_Type *base, lpspi_transfer_t *transf
  */
 status_t LPSPI_MasterTransferNonBlocking(LPSPI_Type *base, lpspi_master_handle_t *handle, lpspi_transfer_t *transfer)
 {
-    assert(handle != NULL);
-    assert(transfer != NULL);
+    if (base == NULL || handle == NULL || transfer == NULL)
+    {
+        return kStatus_InvalidArgument;
+    }
 
     /* Check that we're not busy.*/
     if (handle->state == (uint8_t)kLPSPI_Busy)

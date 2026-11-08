@@ -1,99 +1,532 @@
-cmake_minimum_required(VERSION 3.16)
-project(crop_stress C ASM)
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
+# CROSS COMPILER SETTING
+SET(CMAKE_SYSTEM_NAME Generic)
+CMAKE_MINIMUM_REQUIRED (VERSION 3.10.0)
 
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Model/model_params.h")
-    message(FATAL_ERROR "Train on labelled readings first: python tools/train.py readings.csv")
+# THE VERSION NUMBER
+SET (Tutorial_VERSION_MAJOR 1)
+SET (Tutorial_VERSION_MINOR 0)
+
+if (DEFINED ENV{SdkRootDirPath})
+	SET(SdkRootDirPath "$ENV{SdkRootDirPath}")
 endif()
 
-# ARM Cortex-M33 architecture flags
-add_compile_options(
-    -mcpu=cortex-m33
-    -mthumb
-    -mfloat-abi=hard
-    -mfpu=fpv5-sp-d16
-    -g
+if (NOT DEFINED SdkRootDirPath)
+	MESSAGE(FATAL_ERROR "SDK path could not be determined. Please update SdkRootDirPath value from your CMake presets file(s).")
+endif()
+
+# ENABLE ASM
+ENABLE_LANGUAGE(ASM)
+
+# RESET FLAG VALUES
+SET(CMAKE_ASM_FLAGS_DEBUG "")
+SET(CMAKE_ASM_FLAGS_RELEASE "")
+SET(CMAKE_C_FLAGS_DEBUG "")
+SET(CMAKE_C_FLAGS_RELEASE "")
+SET(CMAKE_CXX_FLAGS_DEBUG "")
+SET(CMAKE_CXX_FLAGS_RELEASE "")
+SET(CMAKE_EXE_LINKER_FLAGS_DEBUG "")
+SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "")
+
+# CURRENT DIRECTORY
+SET(ProjDirPath ${CMAKE_CURRENT_SOURCE_DIR})
+
+SET(EXECUTABLE_OUTPUT_PATH ${ProjDirPath}/${CMAKE_BUILD_TYPE})
+SET(LIBRARY_OUTPUT_PATH ${ProjDirPath}/${CMAKE_BUILD_TYPE})
+
+set(CMAKE_USER_MAKE_RULES_OVERRIDE "user_override.cmake")
+
+project(frdmmcxw71_wireless_uart_bm_light_sensor)
+set(MCUX_SDK_PROJECT_NAME frdmmcxw71_wireless_uart_bm_light_sensor)
+
+include(${ProjDirPath}/flags.cmake)
+
+add_executable(${MCUX_SDK_PROJECT_NAME} "${ProjDirPath}/CMSIS/tz_context.h"
+"${ProjDirPath}/CMSIS/mpu_armv8.h"
+"${ProjDirPath}/CMSIS/core_cm33.h"
+"${ProjDirPath}/CMSIS/cmsis_version.h"
+"${ProjDirPath}/CMSIS/cmsis_gcc.h"
+"${ProjDirPath}/CMSIS/cmsis_compiler.h"
+"${ProjDirPath}/bluetooth/port/fwk_timer_manager.h"
+"${ProjDirPath}/bluetooth/port/fwk_timer_manager.c"
+"${ProjDirPath}/bluetooth/port/fwk_seclib.h"
+"${ProjDirPath}/bluetooth/port/fwk_panic.h"
+"${ProjDirPath}/bluetooth/port/fwk_os_abs.h"
+"${ProjDirPath}/bluetooth/port/fwk_os_abs.c"
+"${ProjDirPath}/bluetooth/port/fwk_messaging.h"
+"${ProjDirPath}/bluetooth/port/fwk_messaging.c"
+"${ProjDirPath}/bluetooth/port/fwk_mem_manager.h"
+"${ProjDirPath}/bluetooth/port/fwk_generic_list.h"
+"${ProjDirPath}/bluetooth/port/fwk_generic_list.c"
+"${ProjDirPath}/bluetooth/profiles/wireless_uart/wireless_uart_service.c"
+"${ProjDirPath}/bluetooth/profiles/wireless_uart/wireless_uart_interface.h"
+"${ProjDirPath}/bluetooth/profiles/battery/battery_service.c"
+"${ProjDirPath}/bluetooth/profiles/battery/battery_interface.h"
+"${ProjDirPath}/bluetooth/controller/interface/controller_interface.h"
+"${ProjDirPath}/bluetooth/controller/interface/controller_api.h"
+"${ProjDirPath}/bluetooth/controller/interface/controller_api.c"
+"${ProjDirPath}/bluetooth/host/interface/vendor_debug_commands.h"
+"${ProjDirPath}/bluetooth/host/interface/l2ca_types.h"
+"${ProjDirPath}/bluetooth/host/interface/l2ca_interface.h"
+"${ProjDirPath}/bluetooth/host/interface/l2ca_cb_interface.h"
+"${ProjDirPath}/bluetooth/host/interface/hci_types.h"
+"${ProjDirPath}/bluetooth/host/interface/hci_interface.h"
+"${ProjDirPath}/bluetooth/host/interface/gatt_types.h"
+"${ProjDirPath}/bluetooth/host/interface/gatt_server_interface.h"
+"${ProjDirPath}/bluetooth/host/interface/gatt_interface.h"
+"${ProjDirPath}/bluetooth/host/interface/gatt_db_dynamic.h"
+"${ProjDirPath}/bluetooth/host/interface/gatt_db_att_interface.h"
+"${ProjDirPath}/bluetooth/host/interface/gatt_db_app_interface.h"
+"${ProjDirPath}/bluetooth/host/interface/gatt_database.h"
+"${ProjDirPath}/bluetooth/host/interface/gatt_client_interface.h"
+"${ProjDirPath}/bluetooth/host/interface/gap_types.h"
+"${ProjDirPath}/bluetooth/host/interface/gap_interface.h"
+"${ProjDirPath}/bluetooth/host/interface/ble_utils.h"
+"${ProjDirPath}/bluetooth/host/interface/ble_sig_defines.h"
+"${ProjDirPath}/bluetooth/host/interface/ble_host_tasks.h"
+"${ProjDirPath}/bluetooth/host/interface/ble_general.h"
+"${ProjDirPath}/bluetooth/host/interface/ble_constants.h"
+"${ProjDirPath}/bluetooth/host/interface/att_types.h"
+"${ProjDirPath}/bluetooth/host/interface/att_params.h"
+"${ProjDirPath}/bluetooth/host/interface/att_errors.h"
+"${ProjDirPath}/bluetooth/host/interface/att_callbacks.h"
+"${ProjDirPath}/bluetooth/host/config/ble_globals.c"
+"${ProjDirPath}/bluetooth/host/config/ble_config.h"
+"${ProjDirPath}/bluetooth/hci_transport/source/hcit_generic_adapter_interface.c"
+"${ProjDirPath}/bluetooth/hci_transport/interface/hci_transport.h"
+"${ProjDirPath}/board/RTE_Device.h"
+"${ProjDirPath}/board/pin_mux.h"
+"${ProjDirPath}/board/pin_mux.c"
+"${ProjDirPath}/board/issdk_hal.h"
+"${ProjDirPath}/board/hardware_init.c"
+"${ProjDirPath}/board/frdm_stbi_a8974_shield.h"
+"${ProjDirPath}/board/frdmmcxw71.h"
+"${ProjDirPath}/board/frdmmcxw71.c"
+"${ProjDirPath}/board/clock_config.h"
+"${ProjDirPath}/board/clock_config.c"
+"${ProjDirPath}/board/board_utility.h"
+"${ProjDirPath}/board/board_utility.c"
+"${ProjDirPath}/board/board_platform.h"
+"${ProjDirPath}/board/board_lp.h"
+"${ProjDirPath}/board/board_lp.c"
+"${ProjDirPath}/board/board_dcdc.h"
+"${ProjDirPath}/board/board_dcdc.c"
+"${ProjDirPath}/board/board_comp.h"
+"${ProjDirPath}/board/board_comp.c"
+"${ProjDirPath}/board/board.h"
+"${ProjDirPath}/board/board.c"
+"${ProjDirPath}/component/uart/fsl_adapter_uart.h"
+"${ProjDirPath}/component/uart/fsl_adapter_lpuart.c"
+"${ProjDirPath}/component/timer/fsl_adapter_timer.h"
+"${ProjDirPath}/component/timer/fsl_adapter_lptmr.c"
+"${ProjDirPath}/component/time_stamp/fsl_adapter_time_stamp.h"
+"${ProjDirPath}/component/time_stamp/fsl_adapter_lptmr_time_stamp.c"
+"${ProjDirPath}/component/rpmsg/fsl_adapter_rpmsg.h"
+"${ProjDirPath}/component/rpmsg/fsl_adapter_rpmsg.c"
+"${ProjDirPath}/component/reset/fsl_adapter_reset.h"
+"${ProjDirPath}/component/reset/fsl_adapter_reset.c"
+"${ProjDirPath}/component/pwm/fsl_adapter_pwm_tpm.c"
+"${ProjDirPath}/component/pwm/fsl_adapter_pwm.h"
+"${ProjDirPath}/component/timer_manager/fsl_component_timer_manager.h"
+"${ProjDirPath}/component/timer_manager/fsl_component_timer_manager.c"
+"${ProjDirPath}/component/power_manager/fsl_pm_device_config.h"
+"${ProjDirPath}/component/power_manager/fsl_pm_device.h"
+"${ProjDirPath}/component/power_manager/fsl_pm_device.c"
+"${ProjDirPath}/component/power_manager/fsl_pm_core.h"
+"${ProjDirPath}/component/power_manager/fsl_pm_core.c"
+"${ProjDirPath}/component/power_manager/fsl_pm_config.h"
+"${ProjDirPath}/component/serial_manager/fsl_component_serial_port_uart.h"
+"${ProjDirPath}/component/serial_manager/fsl_component_serial_port_uart.c"
+"${ProjDirPath}/component/serial_manager/fsl_component_serial_port_rpmsg.h"
+"${ProjDirPath}/component/serial_manager/fsl_component_serial_port_rpmsg.c"
+"${ProjDirPath}/component/serial_manager/fsl_component_serial_port_internal.h"
+"${ProjDirPath}/component/serial_manager/fsl_component_serial_manager.h"
+"${ProjDirPath}/component/serial_manager/fsl_component_serial_manager.c"
+"${ProjDirPath}/component/panic/fsl_component_panic.h"
+"${ProjDirPath}/component/panic/fsl_component_panic.c"
+"${ProjDirPath}/component/osa/fsl_os_abstraction_config.h"
+"${ProjDirPath}/component/osa/fsl_os_abstraction_bm.h"
+"${ProjDirPath}/component/osa/fsl_os_abstraction_bm.c"
+"${ProjDirPath}/component/osa/fsl_os_abstraction.h"
+"${ProjDirPath}/component/messaging/fsl_component_messaging.h"
+"${ProjDirPath}/component/messaging/fsl_component_messaging.c"
+"${ProjDirPath}/component/log/fsl_component_log_config.h"
+"${ProjDirPath}/component/log/fsl_component_log.h"
+"${ProjDirPath}/component/log/fsl_component_log.c"
+"${ProjDirPath}/component/mem_manager/fsl_component_mem_manager_light.c"
+"${ProjDirPath}/component/mem_manager/fsl_component_mem_manager.h"
+"${ProjDirPath}/component/lists/fsl_component_generic_list.h"
+"${ProjDirPath}/component/lists/fsl_component_generic_list.c"
+"${ProjDirPath}/component/led/fsl_component_led.h"
+"${ProjDirPath}/component/led/fsl_component_led.c"
+"${ProjDirPath}/component/internal_flash/fsl_adapter_k4_flash.c"
+"${ProjDirPath}/component/internal_flash/fsl_adapter_flash.h"
+"${ProjDirPath}/component/gpio/fsl_adapter_gpio.h"
+"${ProjDirPath}/component/gpio/fsl_adapter_gpio.c"
+"${ProjDirPath}/component/common_task/fsl_component_common_task.h"
+"${ProjDirPath}/component/common_task/fsl_component_common_task.c"
+"${ProjDirPath}/component/button/fsl_component_button.h"
+"${ProjDirPath}/component/button/fsl_component_button.c"
+"${ProjDirPath}/device/system_MCXW716C.h"
+"${ProjDirPath}/device/system_MCXW716C.c"
+"${ProjDirPath}/device/MCXW716C_features.h"
+"${ProjDirPath}/device/MCXW716C.h"
+"${ProjDirPath}/device/fsl_device_registers.h"
+"${ProjDirPath}/drivers/fsl_wuu.h"
+"${ProjDirPath}/drivers/fsl_wuu.c"
+"${ProjDirPath}/drivers/fsl_vref.h"
+"${ProjDirPath}/drivers/fsl_vref.c"
+"${ProjDirPath}/drivers/fsl_trgmux.h"
+"${ProjDirPath}/drivers/fsl_trgmux.c"
+"${ProjDirPath}/drivers/fsl_tpm.h"
+"${ProjDirPath}/drivers/fsl_tpm.c"
+"${ProjDirPath}/drivers/fsl_spc.h"
+"${ProjDirPath}/drivers/fsl_spc.c"
+"${ProjDirPath}/drivers/fsl_sfa.h"
+"${ProjDirPath}/drivers/fsl_sfa.c"
+"${ProjDirPath}/drivers/fsl_port.h"
+"${ProjDirPath}/drivers/fsl_ltc.h"
+"${ProjDirPath}/drivers/fsl_ltc.c"
+"${ProjDirPath}/drivers/fsl_lpuart_edma.h"
+"${ProjDirPath}/drivers/fsl_lpuart_edma.c"
+"${ProjDirPath}/drivers/fsl_lpuart_cmsis.h"
+"${ProjDirPath}/drivers/fsl_lpuart_cmsis.c"
+"${ProjDirPath}/drivers/fsl_lpuart.h"
+"${ProjDirPath}/drivers/fsl_lpuart.c"
+"${ProjDirPath}/drivers/fsl_lptmr.h"
+"${ProjDirPath}/drivers/fsl_lptmr.c"
+"${ProjDirPath}/drivers/fsl_lpspi_edma.h"
+"${ProjDirPath}/drivers/fsl_lpspi_edma.c"
+"${ProjDirPath}/drivers/fsl_lpspi_cmsis.h"
+"${ProjDirPath}/drivers/fsl_lpspi_cmsis.c"
+"${ProjDirPath}/drivers/fsl_lpspi.h"
+"${ProjDirPath}/drivers/fsl_lpspi.c"
+"${ProjDirPath}/drivers/fsl_lpit.h"
+"${ProjDirPath}/drivers/fsl_lpit.c"
+"${ProjDirPath}/drivers/fsl_lpi2c_edma.h"
+"${ProjDirPath}/drivers/fsl_lpi2c_edma.c"
+"${ProjDirPath}/drivers/fsl_lpi2c_cmsis.h"
+"${ProjDirPath}/drivers/fsl_lpi2c_cmsis.c"
+"${ProjDirPath}/drivers/fsl_lpi2c.h"
+"${ProjDirPath}/drivers/fsl_lpi2c.c"
+"${ProjDirPath}/drivers/fsl_lpadc.h"
+"${ProjDirPath}/drivers/fsl_lpadc.c"
+"${ProjDirPath}/drivers/fsl_k4_flash.h"
+"${ProjDirPath}/drivers/fsl_k4_flash.c"
+"${ProjDirPath}/drivers/fsl_k4_controller.h"
+"${ProjDirPath}/drivers/fsl_k4_controller.c"
+"${ProjDirPath}/drivers/fsl_imu.h"
+"${ProjDirPath}/drivers/fsl_imu.c"
+"${ProjDirPath}/drivers/fsl_gpio.h"
+"${ProjDirPath}/drivers/fsl_gpio.c"
+"${ProjDirPath}/drivers/fsl_flash_utilities.h"
+"${ProjDirPath}/drivers/fsl_flash_adapter.h"
+"${ProjDirPath}/drivers/fsl_flash.h"
+"${ProjDirPath}/drivers/fsl_elemu.h"
+"${ProjDirPath}/drivers/fsl_elemu.c"
+"${ProjDirPath}/drivers/fsl_edma.h"
+"${ProjDirPath}/drivers/fsl_edma.c"
+"${ProjDirPath}/drivers/fsl_crc.h"
+"${ProjDirPath}/drivers/fsl_crc.c"
+"${ProjDirPath}/drivers/fsl_common_arm.h"
+"${ProjDirPath}/drivers/fsl_common_arm.c"
+"${ProjDirPath}/drivers/fsl_common.h"
+"${ProjDirPath}/drivers/fsl_common.c"
+"${ProjDirPath}/drivers/fsl_cmc.h"
+"${ProjDirPath}/drivers/fsl_cmc.c"
+"${ProjDirPath}/drivers/fsl_clock.h"
+"${ProjDirPath}/drivers/fsl_clock.c"
+"${ProjDirPath}/drivers/fsl_ccm32k.h"
+"${ProjDirPath}/drivers/fsl_ccm32k.c"
+"${ProjDirPath}/framework/SFC/fwk_sfc.h"
+"${ProjDirPath}/framework/Sensors/sensors.h"
+"${ProjDirPath}/framework/Sensors/sensors.c"
+"${ProjDirPath}/framework/Platform/fwk_platform_sensors.h"
+"${ProjDirPath}/framework/Platform/fwk_platform_sensors.c"
+"${ProjDirPath}/framework/Platform/fwk_platform_rng.h"
+"${ProjDirPath}/framework/Platform/fwk_platform_rng.c"
+"${ProjDirPath}/framework/Platform/fwk_platform_mws.h"
+"${ProjDirPath}/framework/Platform/fwk_platform_mws.c"
+"${ProjDirPath}/framework/Platform/fwk_platform_lowpower.h"
+"${ProjDirPath}/framework/Platform/fwk_platform_lowpower.c"
+"${ProjDirPath}/framework/Platform/fwk_platform_ics.h"
+"${ProjDirPath}/framework/Platform/fwk_platform_ics.c"
+"${ProjDirPath}/framework/Platform/fwk_platform_definitions.h"
+"${ProjDirPath}/framework/Platform/fwk_platform_coex.h"
+"${ProjDirPath}/framework/Platform/fwk_platform_ble.h"
+"${ProjDirPath}/framework/Platform/fwk_platform_ble.c"
+"${ProjDirPath}/framework/Platform/fwk_platform.h"
+"${ProjDirPath}/framework/Platform/fwk_platform.c"
+"${ProjDirPath}/framework/SecLib/SecLib_sss.c"
+"${ProjDirPath}/framework/SecLib/SecLib_ecp256.h"
+"${ProjDirPath}/framework/SecLib/SecLib_aes_mmo.c"
+"${ProjDirPath}/framework/SecLib/SecLib.h"
+"${ProjDirPath}/framework/SecLib/CryptoLibSW.h"
+"${ProjDirPath}/framework/RNG/RNG_Interface.h"
+"${ProjDirPath}/framework/RNG/RNG.c"
+"${ProjDirPath}/framework/MWSCoexistence/MWS.h"
+"${ProjDirPath}/framework/MWSCoexistence/MWS.c"
+"${ProjDirPath}/framework/ModuleInfo/ModuleInfo.h"
+"${ProjDirPath}/framework/ModuleInfo/ModuleInfo.c"
+"${ProjDirPath}/framework/HWParameter/HWParameter.h"
+"${ProjDirPath}/framework/HWParameter/HWParameter.c"
+"${ProjDirPath}/framework/FunctionLib/FunctionLib.h"
+"${ProjDirPath}/framework/FunctionLib/FunctionLib.c"
+"${ProjDirPath}/framework/DBG/fwk_debug.h"
+"${ProjDirPath}/framework/Common/fwk_hal_macros.h"
+"${ProjDirPath}/framework/Common/EmbeddedTypes.h"
+"${ProjDirPath}/framework/Platform/configs/SecLib_mbedtls_config.h"
+"${ProjDirPath}/framework/Platform/configs/rpmsg_config.h"
+"${ProjDirPath}/framework/Platform/configs/fwk_config.h"
+"${ProjDirPath}/framework/NVM/source/NV_FsciCommands.h"
+"${ProjDirPath}/framework/NVM/source/NV_FsciCommands.c"
+"${ProjDirPath}/framework/NVM/source/NV_Flash.h"
+"${ProjDirPath}/framework/NVM/source/NV_Flash.c"
+"${ProjDirPath}/framework/NVM/interface/NVM_Interface.h"
+"${ProjDirPath}/framework/MWSCoexistence/Intercore/MWS_Intercore.h"
+"${ProjDirPath}/framework/MWSCoexistence/Intercore/MWS_Intercore.c"
+"${ProjDirPath}/framework/DBG/SWO/fwk_debug_swo.h"
+"${ProjDirPath}/framework/DBG/SWO/fwk_debug_swo.c"
+"${ProjDirPath}/gpio_driver/gpio_driver_irq.c"
+"${ProjDirPath}/gpio_driver/gpio_driver.h"
+"${ProjDirPath}/gpio_driver/gpio_driver.c"
+"${ProjDirPath}/gpio_driver/Driver_GPIO.h"
+"${ProjDirPath}/interfaces/sensor_io_spi.h"
+"${ProjDirPath}/interfaces/sensor_io_spi.c"
+"${ProjDirPath}/interfaces/sensor_io_i2c.h"
+"${ProjDirPath}/interfaces/sensor_io_i2c.c"
+"${ProjDirPath}/interfaces/sensor_drv.h"
+"${ProjDirPath}/interfaces/register_io_spi.h"
+"${ProjDirPath}/interfaces/register_io_spi.c"
+"${ProjDirPath}/interfaces/register_io_i2c.h"
+"${ProjDirPath}/interfaces/register_io_i2c.c"
+"${ProjDirPath}/mcmgr/mcmgr_internal_core_api_mcxw716_ext.c"
+"${ProjDirPath}/mcmgr/mcmgr_internal_core_api_mcxw716.c"
+"${ProjDirPath}/mcmgr/mcmgr_internal_core_api.h"
+"${ProjDirPath}/mcmgr/mcmgr_imu_internal.h"
+"${ProjDirPath}/mcmgr/mcmgr_imu_internal.c"
+"${ProjDirPath}/mcmgr/mcmgr.h"
+"${ProjDirPath}/mcmgr/mcmgr.c"
+"${ProjDirPath}/rpmsg_lite/virtio/virtqueue.c"
+"${ProjDirPath}/rpmsg_lite/rpmsg_lite/rpmsg_ns.c"
+"${ProjDirPath}/rpmsg_lite/rpmsg_lite/rpmsg_lite.c"
+"${ProjDirPath}/rpmsg_lite/include/virtqueue.h"
+"${ProjDirPath}/rpmsg_lite/include/virtio_ring.h"
+"${ProjDirPath}/rpmsg_lite/include/rpmsg_ns.h"
+"${ProjDirPath}/rpmsg_lite/include/rpmsg_lite.h"
+"${ProjDirPath}/rpmsg_lite/include/rpmsg_env.h"
+"${ProjDirPath}/rpmsg_lite/include/rpmsg_default_config.h"
+"${ProjDirPath}/rpmsg_lite/include/rpmsg_compiler.h"
+"${ProjDirPath}/rpmsg_lite/include/llist.h"
+"${ProjDirPath}/rpmsg_lite/common/llist.c"
+"${ProjDirPath}/rpmsg_lite/include/environment/bm/rpmsg_env_specific.h"
+"${ProjDirPath}/rpmsg_lite/rpmsg_lite/porting/environment/rpmsg_env_bm.c"
+"${ProjDirPath}/rpmsg_lite/include/platform/mcxw716/rpmsg_platform.h"
+"${ProjDirPath}/rpmsg_lite/rpmsg_lite/porting/platform/mcxw716/rpmsg_platform_ext.c"
+"${ProjDirPath}/rpmsg_lite/rpmsg_lite/porting/platform/mcxw716/rpmsg_platform.c"
+"${ProjDirPath}/secure-subsystem/sscp/fsl_sss_sscp_config.h"
+"${ProjDirPath}/secure-subsystem/sscp/fsl_sss_sscp.c"
+"${ProjDirPath}/secure-subsystem/sscp/fsl_sscp_mu.h"
+"${ProjDirPath}/secure-subsystem/sscp/fsl_sscp_mu.c"
+"${ProjDirPath}/secure-subsystem/port/sss_sha256.c"
+"${ProjDirPath}/secure-subsystem/port/sss_init.c"
+"${ProjDirPath}/secure-subsystem/port/sss_hmac_sha256.c"
+"${ProjDirPath}/secure-subsystem/port/sss_ecdh.c"
+"${ProjDirPath}/secure-subsystem/port/sss_crypto.h"
+"${ProjDirPath}/secure-subsystem/port/sss_ccm.c"
+"${ProjDirPath}/secure-subsystem/port/sss_aes_cmac.c"
+"${ProjDirPath}/secure-subsystem/port/sss_aes.c"
+"${ProjDirPath}/secure-subsystem/inc/fsl_sss_sscp.h"
+"${ProjDirPath}/secure-subsystem/inc/fsl_sss_config_elemu.h"
+"${ProjDirPath}/secure-subsystem/inc/fsl_sss_config.h"
+"${ProjDirPath}/secure-subsystem/inc/fsl_sss_api.h"
+"${ProjDirPath}/secure-subsystem/inc/fsl_sscp_config_elemu.h"
+"${ProjDirPath}/secure-subsystem/inc/fsl_sscp_config.h"
+"${ProjDirPath}/secure-subsystem/inc/fsl_sscp_commands.h"
+"${ProjDirPath}/secure-subsystem/inc/fsl_sscp.h"
+"${ProjDirPath}/secure-subsystem/mgmt/fsl_sss_mgmt.h"
+"${ProjDirPath}/secure-subsystem/mgmt/fsl_sss_mgmt.c"
+"${ProjDirPath}/sensors/fxls8974_drv.h"
+"${ProjDirPath}/sensors/fxls8974_drv.c"
+"${ProjDirPath}/sensors/fxls8974.h"
+"${ProjDirPath}/source/wireless_uart.h"
+"${ProjDirPath}/source/wireless_uart.c"
+"${ProjDirPath}/source/dht11.c"
+"${ProjDirPath}/source/board_adc.c"
+"${ProjDirPath}/source/crop_stress.c"
+"${ProjDirPath}/source/semihost_hardfault.c"
+"${ProjDirPath}/source/gatt_uuid128.h"
+"${ProjDirPath}/source/gatt_db.h"
+"${ProjDirPath}/source/app_services_init.c"
+"${ProjDirPath}/source/app_preinclude_common.h"
+"${ProjDirPath}/source/app_preinclude.h"
+"${ProjDirPath}/source/app_config.c"
+"${ProjDirPath}/source/app_ble_init.c"
+"${ProjDirPath}/source/app.h"
+"${ProjDirPath}/source/common/main.c"
+"${ProjDirPath}/source/common/ieee11073.h"
+"${ProjDirPath}/source/common/ble_service_discovery.h"
+"${ProjDirPath}/source/common/ble_service_discovery.c"
+"${ProjDirPath}/source/common/ble_init.h"
+"${ProjDirPath}/source/common/ble_init.c"
+"${ProjDirPath}/source/common/ble_host_task_config.h"
+"${ProjDirPath}/source/common/ble_host_tasks.c"
+"${ProjDirPath}/source/common/ble_conn_manager.h"
+"${ProjDirPath}/source/common/ble_conn_manager.c"
+"${ProjDirPath}/source/common/app_scanner.h"
+"${ProjDirPath}/source/common/app_scanner.c"
+"${ProjDirPath}/source/common/app_nvm.c"
+"${ProjDirPath}/source/common/app_connection.c"
+"${ProjDirPath}/source/common/app_conn.h"
+"${ProjDirPath}/source/common/app_conn.c"
+"${ProjDirPath}/source/common/app_advertiser.h"
+"${ProjDirPath}/source/common/app_advertiser.c"
+"${ProjDirPath}/source/common/gatt_db/gatt_db_handles.h"
+"${ProjDirPath}/source/common/gatt_db/gatt_database.c"
+"${ProjDirPath}/source/common/gatt_db/macros/gatt_uuid_def_x.h"
+"${ProjDirPath}/source/common/gatt_db/macros/gatt_uuid_decl_x.h"
+"${ProjDirPath}/source/common/gatt_db/macros/gatt_size_x.h"
+"${ProjDirPath}/source/common/gatt_db/macros/gatt_init_x.h"
+"${ProjDirPath}/source/common/gatt_db/macros/gatt_enum_x.h"
+"${ProjDirPath}/source/common/gatt_db/macros/gatt_decl_x.h"
+"${ProjDirPath}/source/common/gatt_db/macros/gatt_db_x_macros.h"
+"${ProjDirPath}/source/common/gatt_db/macros/gatt_db_macros.h"
+"${ProjDirPath}/source/common/gatt_db/macros/gatt_alloc_x.h"
+"${ProjDirPath}/startup/startup_mcxw716.c"
+"${ProjDirPath}/utilities/systick_utils.h"
+"${ProjDirPath}/utilities/systick_utils.c"
+"${ProjDirPath}/utilities/fsl_str.h"
+"${ProjDirPath}/utilities/fsl_str.c"
+"${ProjDirPath}/utilities/fsl_memcpy.S"
+"${ProjDirPath}/utilities/fsl_format.h"
+"${ProjDirPath}/utilities/fsl_format.c"
+"${ProjDirPath}/utilities/fsl_debug_console.h"
+"${ProjDirPath}/utilities/fsl_debug_console.c"
+"${ProjDirPath}/utilities/fsl_assert.h"
+"${ProjDirPath}/utilities/fsl_assert.c"
+"${ProjDirPath}/CMSIS_driver/Include/Driver_USART.h"
+"${ProjDirPath}/CMSIS_driver/Include/Driver_SPI.h"
+"${ProjDirPath}/CMSIS_driver/Include/Driver_I2C.h"
+"${ProjDirPath}/CMSIS_driver/Include/Driver_Common.h"
 )
 
-add_compile_definitions(
-    CPU_MCXW716CMFTA
-    CPU_MCXW716CMFTA_cm33
-    __USE_CMSIS
-    DISABLE_WDOG=1
-    DebugConsole_c=1
-    SDK_DEBUGCONSOLE=1
-    SDK_DEBUGCONSOLE_UART=1
-    PRINTF_FLOAT_ENABLE=1
-    PRINTF_ADVANCED_ENABLE=1
-    DEBUG
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set_target_properties(${MCUX_SDK_PROJECT_NAME} PROPERTIES SUFFIX ".axf")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+	set_target_properties(${MCUX_SDK_PROJECT_NAME} PROPERTIES SUFFIX ".axf")
+endif()
+
+if(${LIBRARY_TYPE} STREQUAL "REDLIB")
+    target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE $ENV{ARMGCC_DIR}/redlib/include)
+endif()
+
+set(asm_include_directories "${ProjDirPath}/source"
 )
 
-include_directories(
-    "${CMAKE_CURRENT_SOURCE_DIR}"
-    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/board"
-    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/CMSIS"
-    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/device"
-    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/drivers"
-    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/component/uart"
-    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/utilities"
+target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE $<$<COMPILE_LANGUAGE:ASM>:${asm_include_directories}>)
+
+set(c_include_directories "${ProjDirPath}/component/osa"
+"${ProjDirPath}/component/pwm"
+"${ProjDirPath}/component/gpio"
+"${ProjDirPath}/component/button"
+"${ProjDirPath}/component/led"
+"${ProjDirPath}/component/reset"
+"${ProjDirPath}/component/common_task"
+"${ProjDirPath}/component/mem_manager"
+"${ProjDirPath}/component/messaging"
+"${ProjDirPath}/component/panic"
+"${ProjDirPath}/component/timer"
+"${ProjDirPath}/component/timer_manager"
+"${ProjDirPath}/component/time_stamp"
+"${ProjDirPath}/framework/HWParameter"
+"${ProjDirPath}/framework/Common"
+"${ProjDirPath}/framework/NVM/interface"
+"${ProjDirPath}/framework/NVM/source"
+"${ProjDirPath}/framework/MWSCoexistence"
+"${ProjDirPath}/framework/MWSCoexistence/Intercore"
+"${ProjDirPath}/framework/ModuleInfo"
+"${ProjDirPath}/framework/FunctionLib"
+"${ProjDirPath}/framework/DBG"
+"${ProjDirPath}/bluetooth/host/interface"
+"${ProjDirPath}/source/common"
+"${ProjDirPath}/bluetooth/host/config"
+"${ProjDirPath}/bluetooth/port"
+"${ProjDirPath}/source/common/gatt_db/macros"
+"${ProjDirPath}/source/common/gatt_db"
+"${ProjDirPath}/bluetooth/profiles/wireless_uart"
+"${ProjDirPath}/bluetooth/profiles/battery"
+"${ProjDirPath}/drivers"
+"${ProjDirPath}/device"
+"${ProjDirPath}/component/internal_flash"
+"${ProjDirPath}/component/uart"
+"${ProjDirPath}/utilities"
+"${ProjDirPath}/component/serial_manager"
+"${ProjDirPath}/component/lists"
+"${ProjDirPath}/component/rpmsg"
+"${ProjDirPath}/framework/Sensors"
+"${ProjDirPath}/framework/Platform"
+"${ProjDirPath}/framework/Platform/configs"
+"${ProjDirPath}/board"
+"${ProjDirPath}/rpmsg_lite/include/platform/mcxw716"
+"${ProjDirPath}/bluetooth/hci_transport/interface"
+"${ProjDirPath}/rpmsg_lite/include/environment/bm"
+"${ProjDirPath}/rpmsg_lite/include"
+"${ProjDirPath}/component/log"
+"${ProjDirPath}/secure-subsystem/inc"
+"${ProjDirPath}/secure-subsystem/mgmt"
+"${ProjDirPath}/secure-subsystem/port"
+"${ProjDirPath}/framework/SecLib"
+"${ProjDirPath}/framework/RNG"
+"${ProjDirPath}/component/power_manager"
+"${ProjDirPath}/bluetooth/controller/interface"
+"${ProjDirPath}/framework/DBG/SWO"
+"${ProjDirPath}/CMSIS"
+"${ProjDirPath}/mcmgr"
+"${ProjDirPath}/secure-subsystem/sscp"
+"${ProjDirPath}/framework/SFC"
+"${ProjDirPath}/CMSIS_driver/Include"
+"${ProjDirPath}/source"
+"${ProjDirPath}/gpio_driver"
+"${ProjDirPath}/interfaces"
+"${ProjDirPath}/sensors"
 )
 
-add_executable(crop_stress
-    main.c
-    APP/app.c
-    APP/crop_stress.c
-    Sensors/sensors.c
-    Model/model.c
-    HAL/hal_mcxw71.c
-    HAL/board_adc.c
-    HAL/dht11.c
-    
-    # Board, clock and pin initialization
-    sdk/board/board.c
-    sdk/board/clock_config.c
-    sdk/board/pin_mux.c
-    
-    # System startup
-    sdk/device/system_MCXW716C.c
-    sdk/startup/startup_mcxw716.c
-    
-    # NXP Peripheral Drivers
-    sdk/drivers/fsl_common.c
-    sdk/drivers/fsl_common_arm.c
-    sdk/drivers/fsl_clock.c
-    sdk/drivers/fsl_lpi2c.c
-    sdk/drivers/fsl_lpadc.c
-    sdk/drivers/fsl_vref.c
-    sdk/drivers/fsl_gpio.c
-    sdk/drivers/fsl_spc.c
-    sdk/drivers/fsl_cmc.c
-    sdk/drivers/fsl_lpuart.c
-    
-    # Utilities & Debug Console
-    sdk/utilities/fsl_debug_console.c
-    sdk/utilities/fsl_str.c
-    sdk/utilities/fsl_assert.c
-    sdk/component/uart/fsl_adapter_lpuart.c
+target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE $<$<COMPILE_LANGUAGE:C>:${c_include_directories}>)
+
+set(cpp_include_directories "")
+
+target_include_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${cpp_include_directories}>)
+
+set(include_files "")
+
+target_precompile_headers(${MCUX_SDK_PROJECT_NAME} PRIVATE ${include_files})
+
+set(link_directories "${ProjDirPath}/libs"
+"${ProjDirPath}/framework"
 )
 
-target_link_options(crop_stress PRIVATE
-    -mcpu=cortex-m33
-    -mthumb
-    -mfloat-abi=hard
-    -mfpu=fpv5-sp-d16
-    --specs=nano.specs
-    --specs=nosys.specs
-    -u _printf_float
-    "-T"
-    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/frdmmcxw71_wireless_uart_bm_light_sensor_Debug.ld"
-    "-L${CMAKE_CURRENT_SOURCE_DIR}/sdk"
+set(link_libraries "m"
+"gcc"
+"nosys"
+"_ble_host_cm33_gcc"
+"_crypto_m33"
 )
 
-target_link_libraries(crop_stress PRIVATE m)
+target_link_directories(${MCUX_SDK_PROJECT_NAME} PRIVATE ${link_directories})
+target_link_libraries(${MCUX_SDK_PROJECT_NAME} PRIVATE -Wl,--start-group)
+target_link_libraries(${MCUX_SDK_PROJECT_NAME} PRIVATE ${TARGET_LINK_SYSTEM_LIBRARIES} ${link_libraries})
+target_link_libraries(${MCUX_SDK_PROJECT_NAME} PRIVATE -Wl,--end-group)
 
-add_custom_command(TARGET crop_stress POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:crop_stress> "${CMAKE_CURRENT_BINARY_DIR}/crop_stress.bin"
-    COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:crop_stress> "${CMAKE_CURRENT_BINARY_DIR}/crop_stress.hex"
-    COMMENT "Generated crop_stress.bin and crop_stress.hex for flashing"
-)
+if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+	add_custom_command(
+		TARGET ${MCUX_SDK_PROJECT_NAME}
+		POST_BUILD
+		COMMAND $ENV{ARMGCC_DIR}/bin/arm-none-eabi-size "$<TARGET_FILE_NAME:${MCUX_SDK_PROJECT_NAME}>" || true
+	)
+elseif(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+	add_custom_command(
+		TARGET ${MCUX_SDK_PROJECT_NAME}
+		POST_BUILD
+		COMMAND $ENV{ARMGCC_DIR}/bin/arm-none-eabi-size "$<TARGET_FILE_NAME:${MCUX_SDK_PROJECT_NAME}>" || true
+	)
+endif()
+

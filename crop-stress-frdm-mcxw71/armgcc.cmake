@@ -16,7 +16,7 @@ SET(TOOLCHAIN_DIR $ENV{ARMGCC_DIR})
 STRING(REGEX REPLACE "\\\\" "/" TOOLCHAIN_DIR "${TOOLCHAIN_DIR}")
 
 IF(NOT TOOLCHAIN_DIR)
-    SET(TOOLCHAIN_DIR "C:/Users/ADARSH ACHARYA/.mcuxpressotools/arm-gnu-toolchain-14.2.rel1-mingw-w64-x86_64-arm-none-eabi")
+    MESSAGE(FATAL_ERROR "***Please set ARMGCC_DIR in envionment variables***")
 ENDIF()
 
 MESSAGE(STATUS "TOOLCHAIN_DIR: " ${TOOLCHAIN_DIR})

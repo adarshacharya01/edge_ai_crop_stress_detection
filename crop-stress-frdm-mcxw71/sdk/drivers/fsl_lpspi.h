@@ -647,7 +647,10 @@ static inline void LPSPI_ClearStatusFlags(LPSPI_Type *base, uint32_t statusFlags
  */
 static inline void LPSPI_EnableInterrupts(LPSPI_Type *base, uint32_t mask)
 {
-    base->IER |= mask;
+    if (base != NULL)
+    {
+        base->IER |= mask;
+    }
 }
 
 /*!
@@ -662,7 +665,10 @@ static inline void LPSPI_EnableInterrupts(LPSPI_Type *base, uint32_t mask)
  */
 static inline void LPSPI_DisableInterrupts(LPSPI_Type *base, uint32_t mask)
 {
-    base->IER &= ~mask;
+    if (base != NULL)
+    {
+        base->IER &= ~mask;
+    }
 }
 
 /*!

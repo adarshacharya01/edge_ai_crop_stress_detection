@@ -21,7 +21,4 @@ typedef struct {
     bool  accel_valid;    /* True if accelerometer read was successful */
 } crop_reading_t;
 
-bool sensors_init(void);
-bool sensors_read(crop_reading_t *reading);
-
 #endif /* CROP_SENSORS_H */

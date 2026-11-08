@@ -1,17 +1,30 @@
 import React from 'react';
 import { Droplets, Thermometer, Wind, Sun } from 'lucide-react';
 
-export default function SensorGrid({ reading }) {
-  const isConnected = !!reading && reading.soil_pct !== null && reading.temperature_c !== null;
-
-  const soil_pct = isConnected ? reading.soil_pct : null;
-  const temperature_c = isConnected ? reading.temperature_c : null;
-  const humidity_pct = isConnected ? reading.humidity_pct : null;
-  const light_lux = isConnected ? reading.light_lux : null;
+export default function SensorGrid({ 
+  reading, 
+  isConnected: bleConnected,
+  soilMoisture = null,
+  temperature = null,
+  humidity = null,
+  luxValue = null 
+}) {
+  const soil_pct = (soilMoisture !== null && soilMoisture !== undefined) 
+    ? Number(soilMoisture) 
+    : (reading?.soil_pct ?? null);
+  const temperature_c = (temperature !== null && temperature !== undefined) 
+    ? Number(temperature) 
+    : (reading?.temperature_c ?? null);
+  const humidity_pct = (humidity !== null && humidity !== undefined) 
+    ? Number(humidity) 
+    : (reading?.humidity_pct ?? null);
+  const light_lux = (luxValue !== null && luxValue !== undefined) 
+    ? Number(luxValue) 
+    : (reading?.light_lux ?? null);
 
   // Visual status indicators
   const getSoilState = (pct) => {
-    if (pct === null) return { label: 'Not Connected', color: '#64748b' };
+    if (pct === null) return bleConnected ? { label: 'Live / Normal', color: '#10b981' } : { label: 'Not Connected', color: '#64748b' };
     if (pct < 15) return { label: 'Critical Dry', color: '#ef4444' };
     if (pct < 25) return { label: 'Dry · Water Now', color: '#f97316' };
     if (pct < 45) return { label: 'Moderate Deficit', color: '#f59e0b' };
@@ -20,7 +33,7 @@ export default function SensorGrid({ reading }) {
   };
 
   const getTempState = (temp) => {
-    if (temp === null) return { label: 'Not Connected', color: '#64748b' };
+    if (temp === null) return bleConnected ? { label: 'Live / Normal', color: '#10b981' } : { label: 'Not Connected', color: '#64748b' };
     if (temp < 15) return { label: 'Cold Shock', color: '#38bdf8' };
     if (temp <= 30) return { label: 'Ideal', color: '#10b981' };
     if (temp <= 32) return { label: 'Elevated', color: '#f59e0b' };
@@ -29,7 +42,7 @@ export default function SensorGrid({ reading }) {
   };
 
   const getHumidityState = (rh) => {
-    if (rh === null) return { label: 'Not Connected', color: '#64748b' };
+    if (rh === null) return bleConnected ? { label: 'Live / Normal', color: '#10b981' } : { label: 'Not Connected', color: '#64748b' };
     if (rh < 35) return { label: 'Extreme Dry Air', color: '#ef4444' };
     if (rh < 45) return { label: 'Dry Air', color: '#f59e0b' };
     if (rh <= 75) return { label: 'Comfort', color: '#10b981' };
@@ -37,7 +50,7 @@ export default function SensorGrid({ reading }) {
   };
 
   const getLightState = (lux) => {
-    if (lux === null) return { label: 'Not Connected', color: '#64748b' };
+    if (lux === null) return bleConnected ? { label: 'Live / Normal', color: '#10b981' } : { label: 'Not Connected', color: '#64748b' };
     if (lux < 500) return { label: 'Deep Shade', color: '#94a3b8' };
     if (lux <= 1000) return { label: 'Mild Light', color: '#38bdf8' };
     if (lux <= 32000) return { label: 'Optimal Sun', color: '#10b981' };

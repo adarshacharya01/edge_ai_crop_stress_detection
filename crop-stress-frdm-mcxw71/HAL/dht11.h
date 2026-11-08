@@ -17,28 +17,10 @@ typedef enum {
     DHT11_STATUS_CHECKSUM_ERROR
 } dht11_status_t;
 
-/**
- * @brief Initialize D2 (PTC0) as Open-Drain bidirectional GPIO with internal pull-up and DWT timer.
- */
 void dht11_init(void);
-
-/**
- * @brief Read temperature (°C) and humidity (%RH) from DHT11.
- *
- * @param[out] temperature_c Pointer to store temperature in °C.
- * @param[out] humidity_pct  Pointer to store relative humidity in %.
- * @return true on success (checksum verified), false on error or timeout.
- */
 bool dht11_read(float *temperature_c, float *humidity_pct);
-
-/**
- * @brief Get human-readable diagnostic status string of the last read attempt.
- */
+int DHT11_Read(float *humidity_pct, float *temperature_c);
 const char *dht11_get_status_str(void);
-
-/**
- * @brief Get the name of the active pin used.
- */
 const char *dht11_get_active_pin_str(void);
 
 #endif /* CROP_DHT11_H */

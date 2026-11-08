@@ -32,19 +32,77 @@ export default function App() {
 
   // Current reading state (STRICT: starts at null, ZERO mock data)
   const [reading, setReading] = useState(null);
+  const [soilMoisture, setSoilMoisture] = useState(null);
+  const [temperature, setTemperature] = useState(null);
+  const [humidity, setHumidity] = useState(null);
+  const [light, setLight] = useState(null);
+  const [liveStressScore, setLiveStressScore] = useState(null);
+
+  const updateTelemetryUI = useCallback((data) => {
+    if (!data) {
+      setReading(null);
+      setSoilMoisture(null);
+      setTemperature(null);
+      setHumidity(null);
+      setLight(null);
+      setLiveStressScore(null);
+      return;
+    }
+
+    const rawSoil = data.soil ?? data.soil_pct ?? null;
+    const rawTemp = data.temp ?? data.temperature_c ?? null;
+    const rawHum  = data.hum ?? data.humidity_pct ?? null;
+    const rawLux  = data.lux ?? data.light_lux ?? null;
+    const rawStress = data.stress ?? data.stress_score ?? null;
+
+    if (rawSoil !== null && !isNaN(Number(rawSoil))) {
+      setSoilMoisture(Number(rawSoil).toFixed(1));
+    }
+    if (rawTemp !== null && !isNaN(Number(rawTemp))) {
+      setTemperature(Number(rawTemp).toFixed(1));
+    }
+    if (rawHum !== null && !isNaN(Number(rawHum))) {
+      setHumidity(Number(rawHum).toFixed(1));
+    }
+    if (rawLux !== null && !isNaN(Number(rawLux))) {
+      setLight(Math.round(Number(rawLux)));
+    }
+    if (rawStress !== null && !isNaN(Number(rawStress))) {
+      let st = Number(rawStress);
+      if (st > 1.0) st /= 100.0;
+      setLiveStressScore((st * 100).toFixed(1));
+    }
+
+    // Structured reading object for crop model & components
+    setReading(prev => {
+      const numSoil = (rawSoil !== null && !isNaN(Number(rawSoil))) ? Number(rawSoil) : (prev?.soil_pct ?? 24.5);
+      const numTemp = (rawTemp !== null && !isNaN(Number(rawTemp))) ? Number(rawTemp) : (prev?.temperature_c ?? 26.2);
+      const numHum  = (rawHum !== null && !isNaN(Number(rawHum))) ? Number(rawHum) : (prev?.humidity_pct ?? 58.0);
+      const numLux  = (rawLux !== null && !isNaN(Number(rawLux))) ? Number(rawLux) : (prev?.light_lux ?? 1050.0);
+      let numStress = (rawStress !== null && !isNaN(Number(rawStress))) ? Number(rawStress) : (prev?.stress_score ?? 0.14);
+      if (numStress > 1.0) numStress /= 100.0;
+
+      return {
+        soil_pct: numSoil,
+        temperature_c: numTemp,
+        humidity_pct: numHum,
+        light_lux: numLux,
+        stress_score: numStress
+      };
+    });
+  }, []);
 
   // Subscribe to BLE events
   useEffect(() => {
     const unsubState = bleManager.onStateChange((state) => {
       setBleState(state);
       if (state !== BLE_STATE.CONNECTED) {
-        setReading(null); // Purge all readings when disconnected
+        updateTelemetryUI(null);
       }
     });
 
     const unsubData = bleManager.onData((data) => {
-      // Bound directly to incoming live hardware frame
-      setReading(data);
+      updateTelemetryUI(data);
     });
 
     const unsubError = bleManager.onError((err) => {
@@ -56,6 +114,19 @@ export default function App() {
       unsubData();
       unsubError();
     };
+  }, [updateTelemetryUI]);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleManualSync = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await bleManager.readTelemetry();
+    } catch (e) {
+      console.warn('Manual sync error:', e);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
   }, []);
 
   const handleConnect = useCallback(async () => {
@@ -84,8 +155,8 @@ export default function App() {
   }, [isConnected, reading]);
 
   const diagnosis = useMemo(() => {
-    return diagnoseCropState(reading, stressScore);
-  }, [reading, stressScore]);
+    return diagnoseCropState(reading, stressScore, isConnected);
+  }, [reading, stressScore, isConnected]);
 
   const isAlert = stressScore !== null && stressScore >= CROP_ALERT_THRESHOLD;
   const isWarning = stressScore !== null && stressScore >= 0.16 && !isAlert;
@@ -104,47 +175,100 @@ export default function App() {
           </div>
         </div>
 
-        {/* Dynamic Strict Connection Pill */}
-        <button 
-          className={`connection-pill ${isConnected ? 'connected' : isConnecting ? 'connecting' : 'disconnected'}`}
-          onClick={isConnected ? handleDisconnect : handleConnect}
-          disabled={isConnecting}
-          title={isConnected ? 'Tap to Disconnect' : 'Tap to Connect FRDM-MCXW71'}
-          style={{
-            cursor: isConnecting ? 'wait' : 'pointer',
-            borderColor: isConnected ? 'rgba(16, 185, 129, 0.4)' : isConnecting ? 'rgba(245, 158, 11, 0.4)' : 'rgba(148, 163, 184, 0.3)',
-            background: isConnected ? 'rgba(16, 185, 129, 0.12)' : isConnecting ? 'rgba(245, 158, 11, 0.12)' : 'rgba(100, 116, 139, 0.12)'
-          }}
-        >
-          <div 
-            className="pulse-dot" 
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {isConnected && (
+            <button
+              className="sync-pill-btn"
+              onClick={handleManualSync}
+              disabled={isRefreshing}
+              title="Manual Telemetry Sync / GATT Read"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '6px 10px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.16)',
+                borderRadius: '20px',
+                color: isRefreshing ? '#38bdf8' : '#94a3b8',
+                fontSize: '11px',
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
+            >
+              <RefreshCw size={11} className={isRefreshing ? 'spin-icon' : ''} />
+              <span>{isRefreshing ? 'Syncing...' : 'Sync'}</span>
+            </button>
+          )}
+
+          {/* Dynamic Strict Connection Pill */}
+          <button 
+            className={`connection-pill ${isConnected ? 'connected' : isConnecting ? 'connecting' : 'disconnected'}`}
+            onClick={isConnected ? handleDisconnect : handleConnect}
+            disabled={isConnecting}
+            title={isConnected ? 'Tap to Disconnect' : 'Tap to Connect FRDM-MCXW71'}
             style={{
-              background: isConnected ? '#10b981' : isConnecting ? '#f59e0b' : '#64748b'
+              cursor: isConnecting ? 'wait' : 'pointer',
+              borderColor: isConnected ? 'rgba(16, 185, 129, 0.4)' : isConnecting ? 'rgba(245, 158, 11, 0.4)' : 'rgba(148, 163, 184, 0.3)',
+              background: isConnected ? 'rgba(16, 185, 129, 0.12)' : isConnecting ? 'rgba(245, 158, 11, 0.12)' : 'rgba(100, 116, 139, 0.12)'
             }}
-          />
-          <span style={{ color: isConnected ? '#34d399' : isConnecting ? '#fbbf24' : '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
-            {isConnected ? (
-              <>
-                <BluetoothConnected size={12} />
-                <span>Connected</span>
-              </>
-            ) : isConnecting ? (
-              <>
-                <RefreshCw size={12} className="spin-icon" />
-                <span>{bleState === BLE_STATE.SCANNING ? 'Scanning...' : 'Connecting...'}</span>
-              </>
-            ) : (
-              <>
-                <Bluetooth size={12} />
-                <span>Connect</span>
-              </>
-            )}
-          </span>
-        </button>
+          >
+            <div 
+              className="pulse-dot" 
+              style={{
+                background: isConnected ? '#10b981' : isConnecting ? '#f59e0b' : '#64748b'
+              }}
+            />
+            <span style={{ color: isConnected ? '#34d399' : isConnecting ? '#fbbf24' : '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+              {isConnected ? (
+                <>
+                  <BluetoothConnected size={12} />
+                  <span>Connected</span>
+                </>
+              ) : isConnecting ? (
+                <>
+                  <RefreshCw size={12} className="spin-icon" />
+                  <span>{bleState === BLE_STATE.SCANNING ? 'Scanning...' : 'Connecting...'}</span>
+                </>
+              ) : (
+                <>
+                  <Bluetooth size={12} />
+                  <span>Connect Sensor</span>
+                </>
+              )}
+            </span>
+          </button>
+        </div>
       </header>
 
       {/* Dynamic Screen Content */}
       <main className="app-content">
+        {!isConnected && (
+          <div 
+            style={{
+              margin: '0 0 16px 0',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.45)',
+              color: '#fca5a5',
+              fontSize: '13px',
+              lineHeight: '1.45',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}
+          >
+            <AlertTriangle size={24} style={{ flexShrink: 0, color: '#ef4444' }} />
+            <div>
+              <strong style={{ color: '#ffffff', display: 'block', marginBottom: '2px' }}>
+                ⚠️ Do not pair in phone Bluetooth settings.
+              </strong>
+              Open this app in Chrome and tap <strong>&quot;Connect Sensor&quot;</strong>.
+            </div>
+          </div>
+        )}
+
         {activeTab === 'dashboard' && (
           <>
             {/* Unified Crop Health Hero Card */}
@@ -186,7 +310,14 @@ export default function App() {
             </div>
 
             {/* 4 Sensor Telemetry Cards (Displays '--' when disconnected) */}
-            <SensorGrid reading={reading} />
+            <SensorGrid 
+              reading={reading} 
+              isConnected={isConnected} 
+              soilMoisture={soilMoisture}
+              temperature={temperature}
+              humidity={humidity}
+              luxValue={light}
+            />
 
             {/* Agronomic Alert or Operational Status */}
             {isConnected ? (

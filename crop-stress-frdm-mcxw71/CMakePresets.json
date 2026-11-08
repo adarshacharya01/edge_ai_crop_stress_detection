@@ -5,40 +5,54 @@
   },
   "configurePresets": [
     {
-      "name": "debug",
-      "displayName": "debug",
+      "name": "Debug",
+      "displayName": "Debug",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "binaryDir": "${fileDir}/${presetName}",
       "toolchainFile": "${sourceDir}/armgcc.cmake",
+      "inherits": "Debug-env",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "debug",
-        "CMAKE_MAKE_PROGRAM": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/ninja-1.13.2/ninja.exe"
-      },
-      "inherits": "debug-env"
+        "POSTPROCESS_UTILITY": "$env{POSTPROCESS_UTILITY}",
+        "LIBRARY_TYPE": "NEWLIB_NANO",
+        "LANGUAGE": "C",
+        "DEBUG_CONSOLE": "UART",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SdkRootDirPath": "$env{SdkRootDirPath}",
+        "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "$env{binaryDir}",
+        "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "$env{binaryDir}",
+        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "$env{binaryDir}"
+      }
     },
     {
-      "name": "release",
-      "displayName": "release",
+      "name": "Release",
+      "displayName": "Release",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "binaryDir": "${fileDir}/${presetName}",
       "toolchainFile": "${sourceDir}/armgcc.cmake",
+      "inherits": "Release-env",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "release",
-        "CMAKE_MAKE_PROGRAM": "C:/Users/ADARSH ACHARYA/.mcuxpressotools/ninja-1.13.2/ninja.exe"
-      },
-      "inherits": "release-env"
+        "POSTPROCESS_UTILITY": "$env{POSTPROCESS_UTILITY}",
+        "LIBRARY_TYPE": "NEWLIB_NANO",
+        "LANGUAGE": "C",
+        "DEBUG_CONSOLE": "UART",
+        "CMAKE_BUILD_TYPE": "Release",
+        "SdkRootDirPath": "$env{SdkRootDirPath}",
+        "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "$env{binaryDir}",
+        "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "$env{binaryDir}",
+        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "$env{binaryDir}"
+      }
     }
   ],
   "buildPresets": [
     {
-      "name": "debug",
-      "displayName": "debug",
-      "configurePreset": "debug"
+      "name": "Debug",
+      "displayName": "Debug",
+      "configurePreset": "Debug"
     },
     {
-      "name": "release",
-      "displayName": "release",
-      "configurePreset": "release"
+      "name": "Release",
+      "displayName": "Release",
+      "configurePreset": "Release"
     }
   ],
   "include": [
