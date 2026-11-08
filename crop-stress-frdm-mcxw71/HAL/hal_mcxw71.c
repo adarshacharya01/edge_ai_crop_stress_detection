@@ -53,9 +53,11 @@ bool hal_init(void)
 {
     BOARD_InitPins();
     BOARD_BootClockRUN();
+    SystemCoreClock = CLOCK_GetCoreSysClkFreq();
     BOARD_InitDebugConsole();
 
     PRINTF("\r\n\r\n[BOOT] MCXW71 Debug Console Initialized (LPUART1 @ 115200)\r\n");
+    PRINTF("[BOOT] CPU Core Clock: %u MHz (SystemCoreClock updated)\r\n", (unsigned int)(SystemCoreClock / 1000000U));
 
     /* Configure I2C Clock: FRO 192 MHz / 16 = 12 MHz */
     CLOCK_SetIpSrc(kCLOCK_Lpi2c1, kCLOCK_IpSrcFro192M);
