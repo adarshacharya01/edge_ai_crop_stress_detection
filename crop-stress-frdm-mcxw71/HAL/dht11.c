@@ -1,13 +1,14 @@
 /**
  * @file dht11.c
- * @brief High-precision DHT11 single-wire bit-bang driver for FRDM-MCXW71.
+ * @brief Universal high-precision DHT11 single-wire bit-bang driver for FRDM-MCXW71.
  *
- * Supported header pins:
- *   - J1 Pin 3 = D2 (MCU PTC4, net CAN0_TX via SH3)
- *   - J1 Pin 5 = D4 (MCU PTA19, net TPM/RGB_G via SH5)
- *   - J1 Pin 4 = D3 (MCU PTC1, net CAN0_RX via SH4)
- *
- * Automatically tests candidate pins and reports hardware status.
+ * Scans all candidate Arduino header pins on J1:
+ *   - D2: PTC4
+ *   - D3: PTC1
+ *   - D4: PTA19
+ *   - D5: PTC2
+ *   - D6: PTA20
+ *   - D7: PTA21
  */
 
 #if __has_include("HAL/dht11.h")
@@ -23,26 +24,27 @@
 #include "fsl_gpio.h"
 #include "fsl_common.h"
 
-/* Channel 1 (Primary): J1 Pin 3 = D2 (MCU PTC4) */
-#define DHT11_D2_PORT       PORTC
-#define DHT11_D2_GPIO       GPIOC
-#define DHT11_D2_PIN        4U
-#define DHT11_D2_CLOCK      kCLOCK_PortC
+typedef struct {
+    const char *name;
+    PORT_Type  *port;
+    GPIO_Type  *gpio;
+    uint32_t   pin;
+    clock_ip_name_t clock_ip;
+} dht11_pin_desc_t;
 
-/* Channel 2: J1 Pin 5 = D4 (MCU PTA19) */
-#define DHT11_D4_PORT       PORTA
-#define DHT11_D4_GPIO       GPIOA
-#define DHT11_D4_PIN        19U
-#define DHT11_D4_CLOCK      kCLOCK_PortA
+static const dht11_pin_desc_t k_dht11_pins[] = {
+    {"D2 (J1 Pin 3 / PTC4)",  PORTC, GPIOC, 4U,  kCLOCK_PortC},
+    {"D3 (J1 Pin 4 / PTC1)",  PORTC, GPIOC, 1U,  kCLOCK_PortC},
+    {"D4 (J1 Pin 5 / PTA19)", PORTA, GPIOA, 19U, kCLOCK_PortA},
+    {"D5 (J1 Pin 6 / PTC2)",  PORTC, GPIOC, 2U,  kCLOCK_PortC},
+    {"D6 (J1 Pin 7 / PTA20)", PORTA, GPIOA, 20U, kCLOCK_PortA},
+    {"D7 (J1 Pin 8 / PTA21)", PORTA, GPIOA, 21U, kCLOCK_PortA}
+};
 
-/* Channel 3: J1 Pin 4 = D3 (MCU PTC1) */
-#define DHT11_D3_PORT       PORTC
-#define DHT11_D3_GPIO       GPIOC
-#define DHT11_D3_PIN        1U
-#define DHT11_D3_CLOCK      kCLOCK_PortC
+#define NUM_DHT11_PINS (sizeof(k_dht11_pins) / sizeof(k_dht11_pins[0]))
 
-static dht11_status_t s_last_status = DHT11_STATUS_IDLE_LOW;
-static const char *s_last_pin_str   = "D2 (J1 Pin 3)";
+static dht11_status_t s_last_status  = DHT11_STATUS_IDLE_LOW;
+static const char    *s_last_pin_str = "D2 (J1 Pin 3 / PTC4)";
 
 static inline uint32_t us_to_cycles(uint32_t us)
 {
@@ -65,9 +67,7 @@ static void config_pin_as_gpio(PORT_Type *port, GPIO_Type *gpio, uint32_t pin)
     PORT_SetPinConfig(port, pin, &pin_cfg);
 
 #if defined(FSL_FEATURE_GPIO_HAS_PORT_INPUT_CONTROL) && FSL_FEATURE_GPIO_HAS_PORT_INPUT_CONTROL
-    /* CRITICAL for MCXW71: Enable digital input buffer in PIDR!
-     * By default on MCXW71, PIDR is 0xFFFFFFFF (all input buffers disabled).
-     * Without clearing the bit in PIDR, PDIR will ALWAYS read 0! */
+    /* CRITICAL for MCXW71: Enable digital input buffer in PIDR! */
     GPIO_PortInputEnable(gpio, 1U << pin);
 #endif
 
@@ -79,17 +79,17 @@ static void config_pin_as_gpio(PORT_Type *port, GPIO_Type *gpio, uint32_t pin)
 void dht11_init(void)
 {
     /* Enable port clocks */
-    CLOCK_EnableClock(DHT11_D2_CLOCK);
-    CLOCK_EnableClock(DHT11_D4_CLOCK);
-    CLOCK_EnableClock(DHT11_D3_CLOCK);
+    CLOCK_EnableClock(kCLOCK_PortA);
+    CLOCK_EnableClock(kCLOCK_PortC);
 
     /* Initialize DWT cycle counter for microsecond timing */
     MSDK_EnableCpuCycleCounter();
 
-    /* Configure pins with internal pull-up and input buffer enabled */
-    config_pin_as_gpio(DHT11_D2_PORT, DHT11_D2_GPIO, DHT11_D2_PIN);
-    config_pin_as_gpio(DHT11_D4_PORT, DHT11_D4_GPIO, DHT11_D4_PIN);
-    config_pin_as_gpio(DHT11_D3_PORT, DHT11_D3_GPIO, DHT11_D3_PIN);
+    /* Configure all candidate pins */
+    for (size_t i = 0; i < NUM_DHT11_PINS; ++i) {
+        CLOCK_EnableClock(k_dht11_pins[i].clock_ip);
+        config_pin_as_gpio(k_dht11_pins[i].port, k_dht11_pins[i].gpio, k_dht11_pins[i].pin);
+    }
 }
 
 static inline bool wait_level(GPIO_Type *gpio, uint32_t pin, uint32_t target_level, uint32_t timeout_us)
@@ -110,27 +110,28 @@ static dht11_status_t dht11_read_channel(GPIO_Type *gpio, uint32_t pin, float *t
     uint8_t data[5] = {0U, 0U, 0U, 0U, 0U};
     uint32_t threshold_cycles = us_to_cycles(45U);
 
-    /* Check if line is idle HIGH (pull-up working) */
+    /* Check if line is idle HIGH */
     gpio->PDDR &= ~(1U << pin);
     SDK_DelayAtLeastUs(10U, SystemCoreClock);
     if (((gpio->PDIR >> pin) & 1U) == 0U) {
-        /* Idle LOW: check wire connection, 3.3V power, or GND */
         gpio->PDDR |= (1U << pin);
         gpio->PSOR = (1U << pin);
         return DHT11_STATUS_IDLE_LOW;
     }
 
-    /* Step 1: Send Host Start Signal */
-    gpio->PDDR |= (1U << pin);  /* Output */
-    gpio->PCOR = (1U << pin);   /* Pull LOW */
-    SDK_DelayAtLeastUs(20000U, SystemCoreClock); /* 20 ms */
+    /* Step 1: Send Host Start Signal (pull LOW for 25 ms) */
+    gpio->PDDR |= (1U << pin);
+    gpio->PCOR = (1U << pin);
+    SDK_DelayAtLeastUs(25000U, SystemCoreClock);
 
-    /* Step 2: Release line, switch to input and sample */
+    /* Actively drive HIGH for 30 us to provide sharp rising edge */
+    gpio->PSOR = (1U << pin);
+    SDK_DelayAtLeastUs(30U, SystemCoreClock);
+
+    /* Step 2: Critical section - switch to input */
     uint32_t primask = DisableGlobalIRQ();
 
-    gpio->PDDR &= ~(1U << pin); /* Input */
-    gpio->PSOR = (1U << pin);
-    SDK_DelayAtLeastUs(30U, SystemCoreClock); /* Wait 30 us for line release */
+    gpio->PDDR &= ~(1U << pin);
 
     /* Step 3: Wait for DHT11 response LOW (~80 us) */
     if (!wait_level(gpio, pin, 0U, 200U)) {
@@ -148,7 +149,7 @@ static dht11_status_t dht11_read_channel(GPIO_Type *gpio, uint32_t pin, float *t
         return DHT11_STATUS_NO_RESPONSE_HIGH;
     }
 
-    /* Wait for end of HIGH response (DHT pulls LOW for bit 0) */
+    /* Wait for DHT11 to pull LOW (start of data bit 0) */
     if (!wait_level(gpio, pin, 0U, 200U)) {
         EnableGlobalIRQ(primask);
         gpio->PDDR |= (1U << pin);
@@ -208,33 +209,22 @@ bool dht11_read(float *temperature_c, float *humidity_pct)
         return false;
     }
 
-    /* 1. Try J1 Pin 3 (D2 / PTC4) */
-    s_last_pin_str = "D2 (J1 Pin 3 / PTC4)";
-    s_last_status = dht11_read_channel(DHT11_D2_GPIO, DHT11_D2_PIN, temperature_c, humidity_pct);
-    if (s_last_status == DHT11_STATUS_OK) {
-        return true;
-    }
+    /* Scan candidate pins on J1 */
+    for (size_t i = 0; i < NUM_DHT11_PINS; ++i) {
+        dht11_status_t st = dht11_read_channel(k_dht11_pins[i].gpio, k_dht11_pins[i].pin, temperature_c, humidity_pct);
+        if (st == DHT11_STATUS_OK) {
+            s_last_pin_str = k_dht11_pins[i].name;
+            s_last_status = DHT11_STATUS_OK;
+            return true;
+        }
 
-    /* Brief recovery */
-    SDK_DelayAtLeastUs(2000U, SystemCoreClock);
+        /* If this was D2 (the primary configured pin), record its failure status */
+        if (i == 0) {
+            s_last_status = st;
+            s_last_pin_str = k_dht11_pins[0].name;
+        }
 
-    /* 2. Try J1 Pin 5 (D4 / PTA19) */
-    dht11_status_t st_d4 = dht11_read_channel(DHT11_D4_GPIO, DHT11_D4_PIN, temperature_c, humidity_pct);
-    if (st_d4 == DHT11_STATUS_OK) {
-        s_last_pin_str = "D4 (J1 Pin 5 / PTA19)";
-        s_last_status = DHT11_STATUS_OK;
-        return true;
-    }
-
-    /* Brief recovery */
-    SDK_DelayAtLeastUs(2000U, SystemCoreClock);
-
-    /* 3. Try J1 Pin 4 (D3 / PTC1) */
-    dht11_status_t st_d3 = dht11_read_channel(DHT11_D3_GPIO, DHT11_D3_PIN, temperature_c, humidity_pct);
-    if (st_d3 == DHT11_STATUS_OK) {
-        s_last_pin_str = "D3 (J1 Pin 4 / PTC1)";
-        s_last_status = DHT11_STATUS_OK;
-        return true;
+        SDK_DelayAtLeastUs(2000U, SystemCoreClock);
     }
 
     return false;

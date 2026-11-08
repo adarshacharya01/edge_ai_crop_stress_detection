@@ -28,14 +28,24 @@ bool crop_adc_read_mv(float *millivolts);
  */
 bool crop_adc_read_light_sensor_mv(float *millivolts);
 
+typedef struct {
+    float a0_mv;
+    float a1_mv;
+    float a2_mv;
+    float a3_mv;
+    float a4_mv;
+    float a5_mv;
+    int best_pin_idx;
+} crop_adc_all_pins_t;
+
 /**
- * @brief Generic LPADC channel conversion on MCXW71.
- *
- * @param channel LPADC channel number (0-15).
- * @param is_side_b True for Side B, false for Side A.
- * @param[out] millivolts Output millivolts.
- * @return true if conversion succeeded, false on error.
+ * @brief Scan all 6 Arduino analog pins (A0 to A5) on Header J4.
  */
-bool crop_adc_read_channel_mv(uint32_t channel, bool is_side_b, float *millivolts);
+bool crop_adc_scan_all(crop_adc_all_pins_t *out);
+
+/**
+ * @brief Return the last scanned voltages for display.
+ */
+const crop_adc_all_pins_t *crop_adc_get_last_scan(void);
 
 #endif /* CROP_BOARD_ADC_H */

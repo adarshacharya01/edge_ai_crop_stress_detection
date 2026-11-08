@@ -3,6 +3,7 @@
 #include "Config/config.h"
 #include "HAL/hal.h"
 #include "HAL/dht11.h"
+#include "HAL/board_adc.h"
 #include "Model/model.h"
 #include "Sensors/sensors.h"
 #else
@@ -10,6 +11,7 @@
 #include "config.h"
 #include "hal.h"
 #include "dht11.h"
+#include "board_adc.h"
 #include "model.h"
 #include "sensors.h"
 #endif
@@ -106,9 +108,17 @@ int app_run(void)
         }
 
         /* 2. Soil Moisture (HW-103) */
-        PRINTF(" 💧 Soil Moisture (J4 Pin 1 / A0) :\r\n");
+        const crop_adc_all_pins_t *scan = crop_adc_get_last_scan();
+        PRINTF(" 💧 Soil Moisture (J4 Analog Header) :\r\n");
+        if (scan != NULL) {
+            PRINTF("     J4 Voltage Scan: A0=%u | A1=%u | A2=%u | A3=%u | A4=%u | A5=%u mV\r\n",
+                   (unsigned int)scan->a0_mv, (unsigned int)scan->a1_mv, (unsigned int)scan->a2_mv,
+                   (unsigned int)scan->a3_mv, (unsigned int)scan->a4_mv, (unsigned int)scan->a5_mv);
+            const char *pin_names[] = {"A0 (PTD1)", "A1 (PTD2)", "A2 (PTD3)", "A3 (PTA4)", "A4 (PTB2)", "A5 (PTB3)"};
+            PRINTF("     Active Input   : %s\r\n", pin_names[scan->best_pin_idx]);
+        }
         if (reading.soil_valid) {
-            PRINTF("     Moisture    : ");
+            PRINTF("     Moisture       : ");
             print_float(reading.soil_pct, 1);
             PRINTF(" %%  [Raw: ");
             print_float(reading.soil_raw_mv, 0);
@@ -122,10 +132,10 @@ int app_run(void)
             } else {
                 soil_desc = "NORMAL / MOIST";
             }
-            PRINTF("     Condition   : %s\r\n", soil_desc);
-            PRINTF("     [Tip: Dip probe in water/wet soil to see moisture %% rise!]\r\n");
+            PRINTF("     Condition      : %s\r\n", soil_desc);
+            PRINTF("     [Tip: Dip probe in water/wet soil to see voltage & %% jump!]\r\n");
         } else {
-            PRINTF("     [!] ADC conversion error (Check A0 probe connection)\r\n");
+            PRINTF("     [!] ADC conversion error\r\n");
         }
 
         /* 3. Ambient Light */
