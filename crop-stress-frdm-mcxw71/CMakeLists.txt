@@ -42,6 +42,7 @@ include_directories(
 add_executable(crop_stress
     main.c
     APP/app.c
+    APP/crop_stress.c
     Sensors/sensors.c
     Model/model.c
     HAL/hal_mcxw71.c

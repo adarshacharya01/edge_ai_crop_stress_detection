@@ -56,7 +56,7 @@ static bool read_soil(float *soil_pct, float *raw_mv)
 {
     float mv = 0.0f;
     if (!hal_soil_millivolts(&mv) || !isfinite(mv)) {
-        *soil_pct = 50.0f;
+        *soil_pct = 0.0f;
         if (raw_mv != NULL) {
             *raw_mv = 0.0f;
         }
@@ -68,12 +68,14 @@ static bool read_soil(float *soil_pct, float *raw_mv)
     }
 
     if (CROP_SOIL_WET_MV == CROP_SOIL_DRY_MV) {
-        *soil_pct = 50.0f;
+        *soil_pct = 0.0f;
         return true;
     }
 
-    float pct = 100.0f * (mv - CROP_SOIL_DRY_MV) /
-                (CROP_SOIL_WET_MV - CROP_SOIL_DRY_MV);
+    /* Stage 2 Linear Mapping Formula:
+     * Moisture % = clamp( (470.0 - Raw_mV) / (470.0 - 180.0) * 100.0, 0.0, 100.0 )
+     */
+    float pct = ((CROP_SOIL_DRY_MV - mv) / (CROP_SOIL_DRY_MV - CROP_SOIL_WET_MV)) * 100.0f;
     *soil_pct = fmaxf(0.0f, fminf(100.0f, pct));
     return true;
 }

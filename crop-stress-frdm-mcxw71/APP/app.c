@@ -1,5 +1,6 @@
 #if __has_include("APP/app.h")
 #include "APP/app.h"
+#include "APP/crop_stress.h"
 #include "Config/config.h"
 #include "HAL/hal.h"
 #include "HAL/dht11.h"
@@ -8,6 +9,7 @@
 #include "Sensors/sensors.h"
 #else
 #include "app.h"
+#include "crop_stress.h"
 #include "config.h"
 #include "hal.h"
 #include "dht11.h"
@@ -125,12 +127,16 @@ int app_run(void)
             PRINTF(" mV]\r\n");
 
             const char *soil_desc = "Optimal";
-            if (reading.soil_pct < 25.0f) {
-                soil_desc = "DRY (In dry air / Needs water)";
-            } else if (reading.soil_pct > 80.0f) {
-                soil_desc = "VERY WET / Saturated";
+            if (reading.soil_pct < 15.0f) {
+                soil_desc = "CRITICAL DRY (<15%)";
+            } else if (reading.soil_pct < 25.0f) {
+                soil_desc = "DRY (Needs water)";
+            } else if (reading.soil_pct <= 44.0f) {
+                soil_desc = "MODERATE DEFICIT (25-44%)";
+            } else if (reading.soil_pct <= 75.0f) {
+                soil_desc = "OPTIMAL / MOIST";
             } else {
-                soil_desc = "NORMAL / MOIST";
+                soil_desc = "VERY WET / Saturated";
             }
             PRINTF("     Condition      : %s\r\n", soil_desc);
             PRINTF("     [Tip: Dip probe in water/wet soil to see voltage & %% jump!]\r\n");
@@ -144,25 +150,28 @@ int app_run(void)
         print_float(reading.light_lux, 0);
         PRINTF(" Lux\r\n");
 
-        /* 4. Edge AI Plant Stress Inference */
+        /* 4. Edge AI Crop Health Analysis (Stage 3 Calibrated 4-Tier Engine) */
+        crop_stress_analysis_t stress = crop_stress_evaluate(&reading);
+
         PRINTF(" 🤖 Edge AI Crop Health Analysis :\r\n");
         PRINTF("     Stress Score: ");
-        print_float(stress_p * 100.0f, 1);
+        print_float(stress.stress_score_pct, 1);
         PRINTF(" %%\r\n");
+        PRINTF("     STATUS      : %s\r\n", stress.status_str);
+        PRINTF("     ACTION      : %s\r\n", stress.action_str);
 
-        if (is_stressed) {
-            PRINTF("     STATUS      : >>> ⚠️ ALERT: CROP STRESS DETECTED! <<<\r\n");
-            PRINTF("     ACTION      : ");
-            if (reading.soil_pct < 30.0f) {
-                PRINTF("Irrigate immediately — soil is too dry!\r\n");
-            } else if (reading.temperature_c > 35.0f) {
-                PRINTF("High temperature heat stress! Provide shade/ventilation.\r\n");
-            } else {
-                PRINTF("Inspect soil moisture, temperature, and sun exposure.\r\n");
-            }
-        } else {
-            PRINTF("     STATUS      : [ HEALTHY - Optimal Growth Conditions ]\r\n");
-        }
+        /* 5. Live BLE Telemetry Stream Frame */
+        PRINTF(" [BLE-TX] {\"soil\":");
+        print_float(reading.soil_pct, 1);
+        PRINTF(",\"temp\":");
+        print_float(reading.temperature_c, 1);
+        PRINTF(",\"hum\":");
+        print_float(reading.humidity_pct, 1);
+        PRINTF(",\"lux\":");
+        print_float(reading.light_lux, 0);
+        PRINTF(",\"stress\":");
+        print_float(stress.stress_score_pct, 1);
+        PRINTF("}\r\n");
 
         PRINTF("----------------------------------------------------------------\r\n\r\n");
 

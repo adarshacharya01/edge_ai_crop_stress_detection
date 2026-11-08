@@ -1,62 +1,94 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Sprout, 
   Activity, 
-  Sliders, 
   Settings, 
   AlertTriangle,
   Lightbulb,
-  Droplets
+  Bluetooth,
+  BluetoothConnected,
+  RefreshCw
 } from 'lucide-react';
 
 import StressGauge from './components/StressGauge';
 import SensorGrid from './components/SensorGrid';
-import SimulatorPanel from './components/SimulatorPanel';
 import PlantAndDevice from './components/PlantAndDevice';
 import { CROPS } from './data/cropProfiles';
 
-import { calculateStressProbability, diagnoseCropState, CROP_ALERT_THRESHOLD } from './services/cropModel';
+import { 
+  calculateStressProbability, 
+  diagnoseCropState, 
+  CROP_ALERT_THRESHOLD 
+} from './services/cropModel';
+
+import { bleManager, BLE_STATE } from './services/bleManager';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCrop, setSelectedCrop] = useState(CROPS[0]);
 
-  // Current reading state (Starts in healthy baseline)
-  const [reading, setReading] = useState({
-    soil_pct: 52.4,
-    temperature_c: 24.0,
-    humidity_pct: 61.5,
-    light_lux: 18500
-  });
+  // Strict Connection State: DISCONNECTED | SCANNING | CONNECTING | CONNECTED
+  const [bleState, setBleState] = useState(bleManager.getState());
 
-  // Compute Edge AI inference score & diagnosis in real time
+  // Current reading state (STRICT: starts at null, ZERO mock data)
+  const [reading, setReading] = useState(null);
+
+  // Subscribe to BLE events
+  useEffect(() => {
+    const unsubState = bleManager.onStateChange((state) => {
+      setBleState(state);
+      if (state !== BLE_STATE.CONNECTED) {
+        setReading(null); // Purge all readings when disconnected
+      }
+    });
+
+    const unsubData = bleManager.onData((data) => {
+      // Bound directly to incoming live hardware frame
+      setReading(data);
+    });
+
+    const unsubError = bleManager.onError((err) => {
+      alert(`[Bluetooth Error] ${err.message}`);
+    });
+
+    return () => {
+      unsubState();
+      unsubData();
+      unsubError();
+    };
+  }, []);
+
+  const handleConnect = useCallback(async () => {
+    try {
+      await bleManager.connect();
+    } catch (e) {
+      console.warn('BLE connect rejected or failed', e);
+    }
+  }, []);
+
+  const handleDisconnect = useCallback(async () => {
+    try {
+      await bleManager.disconnect();
+    } catch (e) {
+      console.warn('BLE disconnect error', e);
+    }
+  }, []);
+
+  const isConnected = bleState === BLE_STATE.CONNECTED;
+  const isConnecting = bleState === BLE_STATE.CONNECTING || bleState === BLE_STATE.SCANNING;
+
+  // Compute Edge AI inference score & diagnosis in real time (null when disconnected)
   const stressScore = useMemo(() => {
-    return calculateStressProbability(reading);
-  }, [reading]);
+    if (!isConnected || !reading) return null;
+    return reading.stress_score ?? calculateStressProbability(reading);
+  }, [isConnected, reading]);
 
   const diagnosis = useMemo(() => {
     return diagnoseCropState(reading, stressScore);
   }, [reading, stressScore]);
 
-  const isAlert = stressScore >= CROP_ALERT_THRESHOLD;
-  const isWarning = stressScore >= 0.40 && !isAlert;
-
-  // Quick Scenario triggers for main dashboard
-  const setQuickScenario = (soil, temp, rh, lux) => {
-    setReading({
-      soil_pct: soil,
-      temperature_c: temp,
-      humidity_pct: rh,
-      light_lux: lux
-    });
-  };
-
-  const quickWater = () => {
-    setReading((prev) => ({
-      ...prev,
-      soil_pct: Math.min(88, Math.max(25, prev.soil_pct + 30))
-    }));
-  };
+  const isAlert = stressScore !== null && stressScore >= CROP_ALERT_THRESHOLD;
+  const isWarning = stressScore !== null && stressScore >= 0.16 && !isAlert;
 
   return (
     <div className="app-container">
@@ -72,13 +104,42 @@ export default function App() {
           </div>
         </div>
 
+        {/* Dynamic Strict Connection Pill */}
         <button 
-          className="connection-pill simulated"
-          onClick={() => setActiveTab('simulator')}
-          title="Virtual Simulation Active"
+          className={`connection-pill ${isConnected ? 'connected' : isConnecting ? 'connecting' : 'disconnected'}`}
+          onClick={isConnected ? handleDisconnect : handleConnect}
+          disabled={isConnecting}
+          title={isConnected ? 'Tap to Disconnect' : 'Tap to Connect FRDM-MCXW71'}
+          style={{
+            cursor: isConnecting ? 'wait' : 'pointer',
+            borderColor: isConnected ? 'rgba(16, 185, 129, 0.4)' : isConnecting ? 'rgba(245, 158, 11, 0.4)' : 'rgba(148, 163, 184, 0.3)',
+            background: isConnected ? 'rgba(16, 185, 129, 0.12)' : isConnecting ? 'rgba(245, 158, 11, 0.12)' : 'rgba(100, 116, 139, 0.12)'
+          }}
         >
-          <div className="pulse-dot" />
-          <span>Simulated</span>
+          <div 
+            className="pulse-dot" 
+            style={{
+              background: isConnected ? '#10b981' : isConnecting ? '#f59e0b' : '#64748b'
+            }}
+          />
+          <span style={{ color: isConnected ? '#34d399' : isConnecting ? '#fbbf24' : '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+            {isConnected ? (
+              <>
+                <BluetoothConnected size={12} />
+                <span>Connected</span>
+              </>
+            ) : isConnecting ? (
+              <>
+                <RefreshCw size={12} className="spin-icon" />
+                <span>{bleState === BLE_STATE.SCANNING ? 'Scanning...' : 'Connecting...'}</span>
+              </>
+            ) : (
+              <>
+                <Bluetooth size={12} />
+                <span>Connect</span>
+              </>
+            )}
+          </span>
         </button>
       </header>
 
@@ -89,7 +150,11 @@ export default function App() {
             {/* Unified Crop Health Hero Card */}
             <div 
               className="unified-hero-card" 
-              style={{ '--hero-accent': diagnosis.color }}
+              style={{ 
+                '--hero-accent': diagnosis.color,
+                cursor: !isConnected ? 'pointer' : 'default'
+              }}
+              onClick={!isConnected ? handleConnect : undefined}
               id="plant-status-banner"
             >
               <div className="hero-left-content">
@@ -100,7 +165,7 @@ export default function App() {
                   >
                     {diagnosis.badge}
                   </span>
-                  <span className="hero-crop-tag" onClick={() => setActiveTab('settings')}>
+                  <span className="hero-crop-tag" onClick={(e) => { e.stopPropagation(); setActiveTab('settings'); }}>
                     {selectedCrop.name}
                   </span>
                 </div>
@@ -114,92 +179,61 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Compact Circular Stress Gauge */}
+              {/* Circular Stress Gauge: Shows '--' when disconnected */}
               <div className="hero-right-gauge">
                 <StressGauge score={stressScore} compact={true} />
               </div>
             </div>
 
-            {/* Quick Testing Chips */}
-            <div className="quick-test-bar">
-              <span className="quick-bar-label">Quick Test:</span>
-              <div className="quick-chip-group">
-                <button 
-                  className="quick-chip"
-                  onClick={() => setQuickScenario(52, 23.5, 62, 18000)}
-                >
-                  🌿 Healthy
-                </button>
-                <button 
-                  className="quick-chip"
-                  onClick={() => setQuickScenario(16, 29.0, 35, 25000)}
-                >
-                  💧 Dry
-                </button>
-                <button 
-                  className="quick-chip"
-                  onClick={() => setQuickScenario(14, 38.0, 22, 55000)}
-                >
-                  🔥 Heat
-                </button>
-                <button 
-                  className="quick-chip"
-                  onClick={() => setQuickScenario(95, 18.0, 90, 1500)}
-                >
-                  🌊 Wet
-                </button>
-                <button 
-                  className="quick-chip water"
-                  onClick={quickWater}
-                  title="Simulate Watering"
-                >
-                  <Droplets size={12} />
-                  +Water
-                </button>
-              </div>
-            </div>
-
-            {/* 4 Sensor Telemetry Cards (Compact Grid) */}
+            {/* 4 Sensor Telemetry Cards (Displays '--' when disconnected) */}
             <SensorGrid reading={reading} />
 
-            {/* High Priority Agronomic Alert (Visible only when stress is elevated) */}
-            {(isAlert || isWarning) ? (
-              <div className="alert-action-box" style={{ borderColor: `${diagnosis.color}40`, background: `${diagnosis.color}0c` }}>
-                <div className="alert-action-header" style={{ color: diagnosis.color }}>
-                  {isAlert ? <AlertTriangle size={16} /> : <Lightbulb size={16} />}
-                  <span>Recommended Action</span>
+            {/* Agronomic Alert or Operational Status */}
+            {isConnected ? (
+              (isAlert || isWarning) ? (
+                <div className="alert-action-box" style={{ borderColor: `${diagnosis.color}40`, background: `${diagnosis.color}0c` }}>
+                  <div className="alert-action-header" style={{ color: diagnosis.color }}>
+                    {isAlert ? <AlertTriangle size={16} /> : <Lightbulb size={16} />}
+                    <span>Recommended Action</span>
+                  </div>
+                  <div className="alert-action-text">
+                    {diagnosis.actions[0]}
+                  </div>
                 </div>
-                <div className="alert-action-text">
-                  {diagnosis.actions[0]}
+              ) : (
+                <div className="nominal-footer-note">
+                  <span className="nominal-dot" />
+                  <span>All telemetry metrics within target biological tolerance.</span>
                 </div>
-              </div>
+              )
             ) : (
-              <div className="nominal-footer-note">
-                <span className="nominal-dot" />
-                <span>All telemetry metrics within target biological tolerance.</span>
+              <div 
+                className="nominal-footer-note"
+                style={{ cursor: 'pointer', borderColor: 'rgba(56, 189, 248, 0.3)', background: 'rgba(56, 189, 248, 0.05)' }}
+                onClick={handleConnect}
+              >
+                <Bluetooth size={14} color="#38bdf8" />
+                <span style={{ color: '#38bdf8', fontWeight: 500 }}>
+                  Tap here or &quot;Connect&quot; above to pair FRDM-MCXW71 via Bluetooth.
+                </span>
               </div>
             )}
           </>
         )}
 
-        {/* Tab 2: Virtual Sensor Simulator */}
-        {activeTab === 'simulator' && (
-          <SimulatorPanel 
-            reading={reading} 
-            onUpdateReading={setReading} 
-          />
-        )}
-
-        {/* Tab 3: Plant & Device Settings */}
+        {/* Tab 2: Plant & Device Settings */}
         {activeTab === 'settings' && (
           <PlantAndDevice 
             selectedCrop={selectedCrop} 
-            onSelectCrop={setSelectedCrop} 
+            onSelectCrop={setSelectedCrop}
+            bleState={bleState}
+            onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
           />
         )}
       </main>
 
-      {/* Bottom Navigation */}
+      {/* Bottom Navigation (Cleaned: Zero simulator tab) */}
       <nav className="bottom-nav">
         <button 
           className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
@@ -208,15 +242,6 @@ export default function App() {
         >
           <Activity size={19} />
           <span>Monitor</span>
-        </button>
-
-        <button 
-          className={`nav-item ${activeTab === 'simulator' ? 'active' : ''}`}
-          onClick={() => setActiveTab('simulator')}
-          id="nav-simulator"
-        >
-          <Sliders size={19} />
-          <span>Simulate</span>
         </button>
 
         <button 

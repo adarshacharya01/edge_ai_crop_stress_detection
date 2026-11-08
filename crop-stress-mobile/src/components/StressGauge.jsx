@@ -1,16 +1,38 @@
 import React from 'react';
-import { CROP_ALERT_THRESHOLD } from '../services/cropModel';
 
 export default function StressGauge({ score, compact = true }) {
-  // Score is 0.00 to 1.00
-  const normalizedScore = Math.min(1.0, Math.max(0.0, score || 0));
-  const pct = Math.round(normalizedScore * 100);
+  const isConnected = score !== null && score !== undefined && !isNaN(score);
+  const normalizedScore = isConnected ? Math.min(1.0, Math.max(0.0, score)) : 0;
+  const pct = isConnected ? Math.round(normalizedScore * 100) : 0;
 
-  // Dynamic status colors
-  const isAlert = normalizedScore >= CROP_ALERT_THRESHOLD;
-  const isWarning = normalizedScore >= 0.40 && !isAlert;
-  const scoreColor = isAlert ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981';
-  const glowColor = isAlert ? 'rgba(239, 68, 68, 0.35)' : isWarning ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)';
+  // 4-tier status colors
+  // Optimal: <= 0.15 (#10b981)
+  // Moderate: 0.16 - 0.50 (#f59e0b)
+  // High: 0.51 - 0.80 (#f97316)
+  // Critical: >= 0.81 (#ef4444)
+  let scoreColor = '#64748b';
+  let glowColor = 'transparent';
+  let statusBadge = 'DISCONNECTED';
+
+  if (isConnected) {
+    if (normalizedScore >= 0.81) {
+      scoreColor = '#ef4444';
+      glowColor = 'rgba(239, 68, 68, 0.35)';
+      statusBadge = 'CRITICAL STRESS';
+    } else if (normalizedScore >= 0.51) {
+      scoreColor = '#f97316';
+      glowColor = 'rgba(249, 115, 22, 0.35)';
+      statusBadge = 'HIGH STRESS';
+    } else if (normalizedScore >= 0.16) {
+      scoreColor = '#f59e0b';
+      glowColor = 'rgba(245, 158, 11, 0.3)';
+      statusBadge = 'MODERATE STRESS';
+    } else {
+      scoreColor = '#10b981';
+      glowColor = 'rgba(16, 185, 129, 0.3)';
+      statusBadge = 'OPTIMAL';
+    }
+  }
 
   // Circular ring parameters for compact view
   const size = 72;
@@ -18,11 +40,14 @@ export default function StressGauge({ score, compact = true }) {
   const center = size / 2;
   const radius = center - strokeWidth;
   const circumference = 2 * Math.PI * radius; // ~182.2
-  const strokeDashoffset = circumference * (1 - normalizedScore);
+  const strokeDashoffset = isConnected ? circumference * (1 - normalizedScore) : circumference;
 
   if (compact) {
     return (
-      <div className="compact-gauge-wrap" title={`Edge AI Stress: ${(normalizedScore * 100).toFixed(0)}%`}>
+      <div 
+        className="compact-gauge-wrap" 
+        title={isConnected ? `Edge AI Stress: ${(normalizedScore * 100).toFixed(0)}%` : 'Board Not Connected'}
+      >
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="compact-gauge-svg">
           <circle
             cx={center}
@@ -44,7 +69,7 @@ export default function StressGauge({ score, compact = true }) {
             strokeLinecap="round"
             style={{
               transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.3s ease',
-              filter: `drop-shadow(0 0 6px ${glowColor})`,
+              filter: isConnected ? `drop-shadow(0 0 6px ${glowColor})` : 'none',
               transform: 'rotate(-90deg)',
               transformOrigin: '50% 50%'
             }}
@@ -53,7 +78,7 @@ export default function StressGauge({ score, compact = true }) {
 
         <div className="compact-gauge-content">
           <span className="compact-gauge-val" style={{ color: scoreColor }}>
-            {normalizedScore.toFixed(2)}
+            {isConnected ? normalizedScore.toFixed(2) : '--'}
           </span>
           <span className="compact-gauge-lbl">STRESS</span>
         </div>
@@ -61,7 +86,7 @@ export default function StressGauge({ score, compact = true }) {
     );
   }
 
-  // Expanded gauge for detailed view in Testbench
+  // Expanded gauge for detailed view
   return (
     <div className="gauge-expanded-card">
       <div className="gauge-header">
@@ -70,7 +95,7 @@ export default function StressGauge({ score, compact = true }) {
           AI Stress Index
         </span>
         <span className="status-pill-badge" style={{ color: scoreColor, background: `${scoreColor}18` }}>
-          {isAlert ? 'CRITICAL ALERT' : isWarning ? 'ELEVATED' : 'OPTIMAL'}
+          {statusBadge}
         </span>
       </div>
 
@@ -79,24 +104,30 @@ export default function StressGauge({ score, compact = true }) {
           className="gauge-bar-fill"
           style={{
             width: `${pct}%`,
-            background: `linear-gradient(90deg, #10b981 0%, ${normalizedScore > 0.4 ? '#f59e0b' : '#10b981'} 55%, ${scoreColor} 100%)`,
-            boxShadow: `0 0 12px ${glowColor}`
+            background: isConnected
+              ? `linear-gradient(90deg, #10b981 0%, #f59e0b 50%, ${scoreColor} 100%)`
+              : 'transparent',
+            boxShadow: isConnected ? `0 0 12px ${glowColor}` : 'none'
           }}
         />
-        {/* 0.70 Alert threshold marker */}
         <div 
           className="gauge-threshold-pin" 
-          style={{ left: '70%' }}
-          title="Alert Threshold (0.70)"
+          style={{ left: '51%' }}
+          title="High Stress Threshold (0.51)"
+        />
+        <div 
+          className="gauge-threshold-pin" 
+          style={{ left: '81%', borderColor: '#ef4444' }}
+          title="Critical Stress Threshold (0.81)"
         />
       </div>
 
       <div className="gauge-bar-labels">
-        <span>0.00 (Healthy)</span>
-        <span style={{ color: isAlert ? '#ef4444' : 'var(--text-dim)', fontWeight: 600 }}>
-          Alert Threshold: 0.70
+        <span>0.00 (Optimal)</span>
+        <span style={{ color: normalizedScore >= 0.51 ? '#f97316' : 'var(--text-dim)', fontWeight: 600 }}>
+          {isConnected ? `Current: ${normalizedScore.toFixed(2)}` : 'Disconnected'}
         </span>
-        <span>1.00 (Fatal)</span>
+        <span>1.00 (Critical)</span>
       </div>
     </div>
   );

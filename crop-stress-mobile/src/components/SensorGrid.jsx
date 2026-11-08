@@ -2,31 +2,46 @@ import React from 'react';
 import { Droplets, Thermometer, Wind, Sun } from 'lucide-react';
 
 export default function SensorGrid({ reading }) {
-  const { soil_pct, temperature_c, humidity_pct, light_lux } = reading;
+  const isConnected = !!reading && reading.soil_pct !== null && reading.temperature_c !== null;
+
+  const soil_pct = isConnected ? reading.soil_pct : null;
+  const temperature_c = isConnected ? reading.temperature_c : null;
+  const humidity_pct = isConnected ? reading.humidity_pct : null;
+  const light_lux = isConnected ? reading.light_lux : null;
 
   // Visual status indicators
   const getSoilState = (pct) => {
-    if (pct < 25) return { label: 'Dry · Water Now', color: '#ef4444' };
-    if (pct <= 70) return { label: 'Optimal', color: '#10b981' };
-    return { label: 'Saturated', color: '#f59e0b' };
+    if (pct === null) return { label: 'Not Connected', color: '#64748b' };
+    if (pct < 15) return { label: 'Critical Dry', color: '#ef4444' };
+    if (pct < 25) return { label: 'Dry · Water Now', color: '#f97316' };
+    if (pct < 45) return { label: 'Moderate Deficit', color: '#f59e0b' };
+    if (pct <= 75) return { label: 'Optimal', color: '#10b981' };
+    return { label: 'Saturated', color: '#38bdf8' };
   };
 
   const getTempState = (temp) => {
+    if (temp === null) return { label: 'Not Connected', color: '#64748b' };
     if (temp < 15) return { label: 'Cold Shock', color: '#38bdf8' };
-    if (temp <= 28) return { label: 'Ideal', color: '#10b981' };
-    return { label: 'Heat Stress', color: '#ef4444' };
+    if (temp <= 30) return { label: 'Ideal', color: '#10b981' };
+    if (temp <= 32) return { label: 'Elevated', color: '#f59e0b' };
+    if (temp <= 35) return { label: 'High Heat', color: '#f97316' };
+    return { label: 'Extreme Heat', color: '#ef4444' };
   };
 
   const getHumidityState = (rh) => {
-    if (rh < 40) return { label: 'Dry Air', color: '#f59e0b' };
+    if (rh === null) return { label: 'Not Connected', color: '#64748b' };
+    if (rh < 35) return { label: 'Extreme Dry Air', color: '#ef4444' };
+    if (rh < 45) return { label: 'Dry Air', color: '#f59e0b' };
     if (rh <= 75) return { label: 'Comfort', color: '#10b981' };
     return { label: 'High Humidity', color: '#38bdf8' };
   };
 
   const getLightState = (lux) => {
-    if (lux < 2000) return { label: 'Low Shade', color: '#94a3b8' };
+    if (lux === null) return { label: 'Not Connected', color: '#64748b' };
+    if (lux < 500) return { label: 'Deep Shade', color: '#94a3b8' };
+    if (lux <= 1000) return { label: 'Mild Light', color: '#38bdf8' };
     if (lux <= 32000) return { label: 'Optimal Sun', color: '#10b981' };
-    return { label: 'Direct Scorch', color: '#f59e0b' };
+    return { label: 'Intense Sun', color: '#f59e0b' };
   };
 
   const soil = getSoilState(soil_pct);
@@ -50,12 +65,18 @@ export default function SensorGrid({ reading }) {
           </span>
         </div>
         <div className="sensor-value">
-          {soil_pct.toFixed(1)}<small>%</small>
+          {soil_pct !== null ? (
+            <>
+              {soil_pct.toFixed(1)}<small>%</small>
+            </>
+          ) : (
+            <span>--</span>
+          )}
         </div>
         <div className="sensor-mini-bar">
           <div
             className="sensor-mini-bar-fill"
-            style={{ width: `${Math.min(100, Math.max(0, soil_pct))}%`, background: soil.color }}
+            style={{ width: `${soil_pct !== null ? Math.min(100, Math.max(0, soil_pct)) : 0}%`, background: soil.color }}
           />
         </div>
       </div>
@@ -74,12 +95,18 @@ export default function SensorGrid({ reading }) {
           </span>
         </div>
         <div className="sensor-value">
-          {temperature_c.toFixed(1)}<small>°C</small>
+          {temperature_c !== null ? (
+            <>
+              {temperature_c.toFixed(1)}<small>°C</small>
+            </>
+          ) : (
+            <span>--</span>
+          )}
         </div>
         <div className="sensor-mini-bar">
           <div
             className="sensor-mini-bar-fill"
-            style={{ width: `${Math.min(100, Math.max(0, (temperature_c / 45) * 100))}%`, background: temp.color }}
+            style={{ width: `${temperature_c !== null ? Math.min(100, Math.max(0, (temperature_c / 45) * 100)) : 0}%`, background: temp.color }}
           />
         </div>
       </div>
@@ -98,12 +125,18 @@ export default function SensorGrid({ reading }) {
           </span>
         </div>
         <div className="sensor-value">
-          {humidity_pct.toFixed(1)}<small>%</small>
+          {humidity_pct !== null ? (
+            <>
+              {humidity_pct.toFixed(1)}<small>%</small>
+            </>
+          ) : (
+            <span>--</span>
+          )}
         </div>
         <div className="sensor-mini-bar">
           <div
             className="sensor-mini-bar-fill"
-            style={{ width: `${Math.min(100, Math.max(0, humidity_pct))}%`, background: rh.color }}
+            style={{ width: `${humidity_pct !== null ? Math.min(100, Math.max(0, humidity_pct)) : 0}%`, background: rh.color }}
           />
         </div>
       </div>
@@ -122,12 +155,18 @@ export default function SensorGrid({ reading }) {
           </span>
         </div>
         <div className="sensor-value">
-          {light_lux >= 1000 ? `${(light_lux / 1000).toFixed(1)}k` : light_lux.toFixed(0)}<small>lx</small>
+          {light_lux !== null ? (
+            <>
+              {light_lux >= 1000 ? `${(light_lux / 1000).toFixed(1)}k` : light_lux.toFixed(0)}<small>lx</small>
+            </>
+          ) : (
+            <span>--</span>
+          )}
         </div>
         <div className="sensor-mini-bar">
           <div
             className="sensor-mini-bar-fill"
-            style={{ width: `${Math.min(100, Math.max(0, (light_lux / 50000) * 100))}%`, background: light.color }}
+            style={{ width: `${light_lux !== null ? Math.min(100, Math.max(0, (light_lux / 50000) * 100)) : 0}%`, background: light.color }}
           />
         </div>
       </div>
