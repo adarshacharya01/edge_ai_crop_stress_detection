@@ -1,10 +1,12 @@
 #if __has_include("HAL/hal.h")
 #include "HAL/hal.h"
 #include "HAL/board_adc.h"
+#include "HAL/dht11.h"
 #include "Config/config.h"
 #else
 #include "hal.h"
 #include "board_adc.h"
+#include "dht11.h"
 #include "config.h"
 #endif
 
@@ -33,7 +35,7 @@ static void init_i2c_pins(void)
         .pullValueSelect = (uint16_t)kPORT_LowPullResistor,
         .slewRate = (uint16_t)kPORT_FastSlewRate,
         .passiveFilterEnable = (uint16_t)kPORT_PassiveFilterDisable,
-        .openDrainEnable = (uint16_t)kPORT_OpenDrainDisable,
+        .openDrainEnable = (uint16_t)kPORT_OpenDrainEnable,
         .driveStrength = (uint16_t)kPORT_LowDriveStrength,
         .driveStrength1 = (uint16_t)kPORT_NormalDriveStrength,
         .mux = (uint16_t)kPORT_MuxAlt4,
@@ -63,6 +65,9 @@ bool hal_init(void)
     if (!crop_adc_init()) {
         return false;
     }
+
+    /* Initialize DHT11 GPIO pin (J1 Pin 3 / D2 / PTC0) */
+    dht11_init();
 
     /* Initialize LPI2C Master (100 kHz) */
     lpi2c_master_config_t config;
@@ -110,4 +115,9 @@ bool hal_i2c_read(uint8_t address, uint8_t *data, uint32_t size)
 bool hal_soil_millivolts(float *millivolts)
 {
     return crop_adc_read_mv(millivolts);
+}
+
+bool hal_dht11_read(float *temperature_c, float *humidity_pct)
+{
+    return dht11_read(temperature_c, humidity_pct);
 }

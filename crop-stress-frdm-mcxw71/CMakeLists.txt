@@ -23,6 +23,8 @@ add_compile_definitions(
     DISABLE_WDOG=1
     SDK_DEBUGCONSOLE=1
     SDK_DEBUGCONSOLE_UART=1
+    PRINTF_FLOAT_ENABLE=1
+    PRINTF_ADVANCED_ENABLE=1
     DEBUG
 )
 
@@ -43,6 +45,7 @@ add_executable(crop_stress
     Model/model.c
     HAL/hal_mcxw71.c
     HAL/board_adc.c
+    HAL/dht11.c
     
     # Board, clock and pin initialization
     sdk/board/board.c
@@ -79,6 +82,7 @@ target_link_options(crop_stress PRIVATE
     -mfpu=fpv5-sp-d16
     --specs=nano.specs
     --specs=nosys.specs
+    -u _printf_float
     "-T"
     "${CMAKE_CURRENT_SOURCE_DIR}/sdk/frdmmcxw71_wireless_uart_bm_light_sensor_Debug.ld"
     "-L${CMAKE_CURRENT_SOURCE_DIR}/sdk"
