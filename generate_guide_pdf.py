@@ -367,3 +367,4 @@ def create_guide_pdf(filename):
 if __name__ == '__main__':
     out_pdf = os.path.join(r"c:\Users\ADARSH ACHARYA\Desktop\PROJECTS\IOT\edge_ai_crop", "SproutGuard_System_Architecture_and_Execution_Guide.pdf")
     create_guide_pdf(out_pdf)
+

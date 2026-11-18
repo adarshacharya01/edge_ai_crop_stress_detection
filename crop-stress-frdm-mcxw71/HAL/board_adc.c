@@ -109,16 +109,38 @@ uint32_t BOARD_ReadSoilAdcMv(void)
 float CalculateSoilMoisturePercent(uint32_t raw_adc_mv)
 {
     float mv = (float)raw_adc_mv;
-    if (mv >= 470.0f) {
+
+    /* Handle disconnected probe / noise near 0V */
+    if (mv < 5.0f) {
         return 0.0f;
     }
-    if (mv <= 180.0f && mv > 10.0f) {
-        return 100.0f;
+
+    float dry_mv = CROP_SOIL_DRY_MV;
+    float wet_mv = CROP_SOIL_WET_MV;
+    float pct = 0.0f;
+
+    if (dry_mv > wet_mv) {
+        /* Standard analog probe: Higher voltage in dry air, lower voltage in wet soil/water */
+        if (mv >= dry_mv) {
+            pct = 0.0f;
+        } else if (mv <= wet_mv) {
+            pct = 100.0f;
+        } else {
+            pct = ((dry_mv - mv) / (dry_mv - wet_mv)) * 100.0f;
+        }
+    } else if (wet_mv > dry_mv) {
+        /* Inverted analog probe: Lower voltage in dry air, higher voltage in wet soil/water */
+        if (mv <= dry_mv) {
+            pct = 0.0f;
+        } else if (mv >= wet_mv) {
+            pct = 100.0f;
+        } else {
+            pct = ((mv - dry_mv) / (wet_mv - dry_mv)) * 100.0f;
+        }
+    } else {
+        pct = 50.0f;
     }
-    if (mv <= 10.0f) {
-        return 24.5f;
-    }
-    float pct = ((470.0f - mv) / (470.0f - 180.0f)) * 100.0f;
+
     if (pct < 0.0f) pct = 0.0f;
     if (pct > 100.0f) pct = 100.0f;
     return pct;

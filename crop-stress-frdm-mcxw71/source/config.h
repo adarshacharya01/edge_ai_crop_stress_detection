@@ -14,11 +14,11 @@
  *   - Saturated / Water Baseline (100% Moisture): Map to 180 mV
  */
 #ifndef CROP_SOIL_DRY_MV
-#define CROP_SOIL_DRY_MV           470.0f   /* Measured dry-air probe voltage (~470 mV) */
+#define CROP_SOIL_DRY_MV           120.0f   /* Measured dry-air probe voltage (~120 mV) */
 #endif
 
 #ifndef CROP_SOIL_WET_MV
-#define CROP_SOIL_WET_MV           180.0f   /* Measured water/wet-soil probe voltage (~180 mV) */
+#define CROP_SOIL_WET_MV           45.0f   /* Measured water/wet-soil probe voltage (~45 mV) */
 #endif
 
 /* --------------------------------------------------------------------------
