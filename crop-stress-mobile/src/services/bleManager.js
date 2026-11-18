@@ -396,6 +396,11 @@ class BleManager {
       const stress = value.getFloat32(16, true);
       if (Number.isFinite(soil) && Number.isFinite(temp) && soil >= 0 && soil <= 100 && temp >= -20 && temp <= 80) {
         const payload = {
+          soil: Math.max(0, Math.min(100, soil)),
+          temp: temp,
+          hum: Math.max(0, Math.min(100, rh)),
+          lux: Math.max(0, lux),
+          stress: Math.max(0, Math.min(1, stress)),
           soil_pct: Math.max(0, Math.min(100, soil)),
           temperature_c: temp,
           humidity_pct: Math.max(0, Math.min(100, rh)),

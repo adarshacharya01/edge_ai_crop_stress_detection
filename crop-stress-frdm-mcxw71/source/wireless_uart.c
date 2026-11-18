@@ -1765,7 +1765,7 @@ static void CropTelemetryTimerCallback(void *pParam)
 
     // 2. Poll LPADC Soil Moisture (HW-103)
     uint32_t raw_adc_mv = BOARD_ReadSoilAdcMv(); 
-    float live_soil = CalculateSoilMoisturePercent(raw_adc_mv); // 470 mV dry -> 0%, 180 mV wet -> 100%
+    float live_soil = CalculateSoilMoisturePercent(raw_adc_mv);
 
     // 3. Poll ALS-PT19 Phototransistor
     uint32_t live_lux = BOARD_ReadAmbientLightLux();
@@ -1773,7 +1773,7 @@ static void CropTelemetryTimerCallback(void *pParam)
     // 4. Re-calculate Edge AI Crop Stress Score dynamically
     float live_stress = CalculateCropStressScore(live_soil, live_temp, live_hum, (float)live_lux);
 
-    // 5. Format fresh dynamic JSON telemetry payload using integer decimal formatting (guarantees valid JSON in newlib-nano)
+    // 5. Format fresh dynamic JSON telemetry payload for USB Serial Console
     int soil_whole = (int)live_soil;
     int soil_frac = (int)((live_soil >= 0.0f ? (live_soil - (float)soil_whole) : ((float)soil_whole - live_soil)) * 10.0f + 0.5f);
     if (soil_frac >= 10) { soil_whole++; soil_frac = 0; }
@@ -1799,14 +1799,30 @@ static void CropTelemetryTimerCallback(void *pParam)
              (unsigned long)live_lux,
              stress_whole, stress_frac);
 
-    /* Update GATT DB attribute value so on-demand GATT reads return the complete fresh JSON */
-    (void)GattDb_WriteAttribute((uint16_t)value_uart_stream, (uint16_t)strlen(json_buf), (const uint8_t *)json_buf);
-
     /* Print to Serial USB Console */
     Serial_Print((uint8_t *)json_buf, gAllowToBlock_d);
 
+    /* 20-byte binary packet for BLE notification (guaranteed single 20-byte ATT MTU delivery) */
+    typedef struct __attribute__((packed)) {
+        float soil;
+        float temp;
+        float rh;
+        float lux;
+        float stress;
+    } crop_ble_telemetry_bin_t;
+
+    crop_ble_telemetry_bin_t bin_pkt;
+    bin_pkt.soil = live_soil;
+    bin_pkt.temp = live_temp;
+    bin_pkt.rh = live_hum;
+    bin_pkt.lux = (float)live_lux;
+    bin_pkt.stress = live_stress / 100.0f;
+
+    /* Update GATT DB attribute value so on-demand GATT reads return 20-byte binary telemetry */
+    (void)GattDb_WriteAttribute((uint16_t)value_uart_stream, (uint16_t)sizeof(bin_pkt), (const uint8_t *)&bin_pkt);
+
     // 6. Send live stream over BLE notification
-    BleApp_SendUartStream((uint8_t *)json_buf, (uint8_t)strlen(json_buf));
+    BleApp_SendUartStream((uint8_t *)&bin_pkt, (uint8_t)sizeof(bin_pkt));
 
     /* Keep periodic timer running */
     (void)TM_Start((timer_handle_t)mCropTelemetryTimerId,

@@ -71,6 +71,10 @@ bool crop_adc_read_channel_mv(uint32_t channel, bool is_side_b, float *millivolt
         return false;
     }
 
+    /* Drain any leftover FIFO entries */
+    lpadc_conv_result_t dummy;
+    while (LPADC_GetConvResult(ADC0, &dummy, 0U)) {}
+
     /* Configure Conversion Command (CMD 1) */
     lpadc_conv_command_config_t cmdConfig;
     LPADC_GetDefaultConvCommandConfig(&cmdConfig);
@@ -109,15 +113,12 @@ bool crop_adc_read_channel_mv(uint32_t channel, bool is_side_b, float *millivolt
 
 uint32_t BOARD_ReadSoilAdcMv(void)
 {
-    float a0_mv = 0.0f, a1_mv = 0.0f;
-    crop_adc_read_channel_mv(5U, true, &a0_mv);   /* A0: PTD1 = ADC0 Channel 5 Side B */
-    crop_adc_read_channel_mv(6U, false, &a1_mv);  /* A1: PTD2 = ADC0 Channel 6 Side A */
-
-    /* Return whichever pin is connected (has reading), default A0 */
-    if (a0_mv > 30.0f) {
+    float a0_mv = 0.0f;
+    if (crop_adc_read_channel_mv(5U, true, &a0_mv) && (a0_mv > 10.0f)) {
         return (uint32_t)a0_mv;
     }
-    if (a1_mv > 30.0f) {
+    float a1_mv = 0.0f;
+    if (crop_adc_read_channel_mv(6U, false, &a1_mv) && (a1_mv > 10.0f)) {
         return (uint32_t)a1_mv;
     }
     return (uint32_t)a0_mv;
